@@ -1,0 +1,2 @@
+40 15 * * 1-5 /root/quant/scripts/spread_mail.sh >> /root/mail.log
+50 3 * * 2-6 /root/quant/scripts/spread_mail_night.sh >> /root/mail.log
