@@ -2,7 +2,8 @@ import numpy as np
 
 class Order:
   def __init__(self):
-    self.wrap_time=-1.0;
+    self.shot_time=-1.0;
+    self.send_time=-1.0;
     self.contract=''
     self.price=-1.0
     self.size=1
@@ -14,15 +15,21 @@ class Order:
     self.offset=-1
     self.tbd=''
 
+  def Filter(self):
+    self.tbd = self.tbd.split('\0')[0]
+    self.contract = self.contract.split('\0')[0]
+    self.order_ref = self.order_ref.split('\0')[0]
+
   def construct(self, s):
     content = s.split(' ')
     if len(content) == 15 and '@' in s and '|' in s:
       #1551280899 465344 1543375009 365863 Order AP910 | 7748.000000@1 0 SELL AP0 new_order SubmitNew UNKNOWN_OFFSET null
-      show_time_sec=int(content[0])
-      show_time_usec=float('0.'+content[1])
-      wrap_time_sec=int(content[2])
-      wrap_time_usec=float('0.'+content[3])
-      self.wrap_time = wrap_time_sec+round(wrap_time_usec,2)
+      shot_time_sec=int(content[0])
+      shot_time_usec=float('0.'+content[1])
+      send_time_sec=int(content[2])
+      send_time_usec=float('0.'+content[3])
+      self.shot_time = shot_time_sec+round(shot_time_usec,2)
+      self.send_time = send_time_sec+round(send_time_usec,2)
       topic=content[4]
       self.contract=content[5]
       split_char=content[6]
@@ -42,8 +49,11 @@ class Order:
       return False
 
   def Show(self, split_c=' '):
+    self.Filter()
     show_str = ''
-    show_str += str(self.wrap_time)
+    show_str += str(self.shot_time)
+    show_str += split_c   
+    show_str += str(self.send_time)
     show_str += split_c   
     show_str += str(self.contract)
     show_str += split_c   
@@ -55,7 +65,7 @@ class Order:
     show_str += split_c   
     show_str += "BUY" if self.side == 1 else "SELL"
     show_str += split_c   
-    show_str += self.action
+    show_str += str(self.action)
     show_str += split_c   
     show_str += self.order_ref
     show_str += split_c   

@@ -18,6 +18,10 @@ class MarketSnapshot:
     self.time_str = ''
     self.time_check = time_check
 
+  def Filter(self):
+    self.ticker = self.ticker.split('\0')[0]
+    self.time_str = self.time_str.split('\0')[0]
+
   def construct(self, string):
     space_count = 0 
     #dash_count = 0 
@@ -127,6 +131,7 @@ class MarketSnapshot:
       return True
 
   def Show(self):
+    self.Filter()
     split_char = ' '
     show_content = ""
     if self.time == -1:
@@ -158,6 +163,7 @@ class MarketSnapshot:
     print(show_content)
 
   def to_csv(self):
+    Filter()
     split_char = ','
     show_content = ""
     if self.time == -1:

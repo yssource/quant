@@ -68,8 +68,6 @@ def GetDF(file_path, ask_name, bid_name, time_name, tz_diff=False):
   return df[columns]
 
 def Merge(df1, df2):
-  #df = (df1.set_index('time')).join(df2.set_index('time'))
-  #df = df.sort_values(by='time').reset_index()
   df = pd.merge(df1, df2, how='outer', on=['time'])
   df = df.sort_values(by='time').reset_index()
   return df
@@ -89,7 +87,6 @@ def Plot(df, main, hedge, date, ax, all_mid):
   df['delta'] = delta
   d = df[~np.isnan(df['delta'])]
   all_mid.extend(d['delta'])
-  #all_mid.append(0.0)
   train_ratio = 0.1
   mean = np.mean(d['delta'][:int(len(d)*train_ratio)])
   std = np.std(d['delta'][:int(len(d)*train_ratio)])
@@ -170,20 +167,12 @@ def GetFuturePeriod(month, year=2019):
 def main():
   month = ['01', '02', '03']
   contract_pair = [('IC', '510500'), ('IH', '510050'), ('IF','510300')]
-  #day = [str(i) if i >=10 else '0'+str(i)for i in range(1,31)]
   pairs = [('510050', 'IH1903'), ('510500', 'IC1903'), ('510300', 'IF1903')]
   pairs = [(cp[1], cp[0]+'19'+str(m)) for cp in contract_pair for m in month]
   main_prefix = '/shared/xyang/Data/MarketData_from_dat/2019/'
   hedge_prefix = '/shared/xyang/Data/future_ctp/2019/'
   main_prefix = '/shared/xyang/Data/MarketData_from_dat/'
   hedge_prefix = '/shared/xyang/Data/future_ctp/'
-  #main_list = [main_prefix+m+'/'+d+'/510050.csv' for m in month for d in day]
-  #hedge_list = [hedge_prefix+m+'/'+d+'/IH1904.csv' for m in month for d in day]
-  #main_list = [main_prefix+d+'/' + p[0] + '.csv' for p in pairs for d in GetFuturePeriod(int(p[1][-1:]))]
-  #hedge_list = [hedge_prefix+d+'/' + p[1] + '.csv' for p in pairs for d in GetFuturePeriod(int(p[1][-1:]))]
-  #hedge_list = [hedge_prefix+m+'/'+d+'/IH1904.csv' for m in month for d in day]
-  #IH=['/shared/xyang/Data/future_ctp/2019/03/20/IH1904.csv', '/shared/xyang/Data/future_ctp/2019/03/13/IH1904.csv']
-  #etf=['/shared/xyang/Data/MarketData_from_dat/2019/03/20/510050.csv', '/shared/xyang/Data/MarketData_from_dat/2019/03/13/510050.csv']
   for p in pairs:
     period = GetFuturePeriod(int(p[1][-1:]))
     main_list = [main_prefix+d+'/' + p[0] + '.csv' for d in period]
