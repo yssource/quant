@@ -1,10 +1,14 @@
 import struct
 import matplotlib.pyplot as plt
 from Reader import *
-#from caler import *
+import sys
+sys.path.append('/root/hft/external/common/lib/cpp_py')
+from caler import *
 from common.order import *
 from common.market_snapshot import *
 import math
+
+contract_config_path = "/root/hft/config/backtest/contract.config"
 
 class BackTester:
   def __init__(self):
@@ -12,20 +16,24 @@ class BackTester:
     self.order_file_size = 0
     self.shot_file_size = 0
     self.pos= {}
-    self.pnl = {}
+    self.net_pnl = {}
+    self.gross_pnl = {}
     self.ticker_strat_map = {}
     self.avgcost = {}
-    self.time_allpnl_map = {}
+    self.gross_time_allpnl_map = {}
+    self.net_time_allpnl_map = {}
     self.strat_data_map = {}
-    self.strat_pnl_map = {}
+    self.gross_strat_pnl_map = {}
+    self.net_strat_pnl_map = {}
     self.pnl_contract = set([])
+    self.Caler = CALER(contract_config_path)
 
   def GetStratPair(self, s):
     exec('temp=' + s)
     return temp
 
   def GetStratPnlKey(self):
-    return self.strat_pnl_map.keys()
+    return self.net_strat_pnl_map.keys()
 
   def load_binary_order(self, file_path):
     self.reader.load_order_file(file_path)
@@ -54,10 +62,18 @@ class BackTester:
     self.reader = Reader()
     self.order_file_size = 0
     self.shot_file_size = 0
-    self.pos = {}
-    self.pnl = {}
+    self.pos= {}
+    self.net_pnl = {}
+    self.gross_pnl = {}
+    self.ticker_strat_map = {}
     self.avgcost = {}
-    self.time_allpnl_map = {}
+    self.gross_time_allpnl_map = {}
+    self.net_time_allpnl_map = {}
+    self.strat_data_map = {}
+    self.gross_strat_pnl_map = {}
+    self.net_strat_pnl_map = {}
+    self.pnl_contract = set([])
+    self.Caler = CALER(contract_config_path)
 
   def RunShot(self):
     for i in range(self.shot_file_size):
@@ -80,66 +96,67 @@ class BackTester:
       if not self.pos.has_key(o.contract):
         self.pos[o.contract] = 0 
         self.avgcost[o.contract] = 0.0 
-        self.pnl[o.contract] = 0 
+        self.net_pnl[o.contract] = 0 
+        self.gross_pnl[o.contract] = 0 
+      pre_pos = self.pos[o.contract]
       self.pos[o.contract] += true_size
       is_close = (self.pos[o.contract]*true_size <= 0)
       if is_close == True:
-        this_pnl = true_size * (self.avgcost[o.contract] - o.price)# * contract_size[con]
-        self.pnl[o.contract] += this_pnl
+        this_net_pnl = self.Caler.CalNetPnl(o.contract, self.avgcost[o.contract], abs(pre_pos), o.price, o.size, OrderSide.Buy if o.side==1 else OrderSide.Sell)
+        this_gross_pnl = self.Caler.CalPnl(o.contract, self.avgcost[o.contract], abs(pre_pos), o.price, o.size, OrderSide.Buy if o.side==1 else OrderSide.Sell)
+        #print("%s %f %i %f %i %i " %(o.contract, self.avgcost[o.contract], abs(pre_pos), o.price, o.size, o.side))
+        self.net_pnl[o.contract] += this_net_pnl
+        self.gross_pnl[o.contract] += this_gross_pnl
         if self.pos[o.contract] == 0:
             self.avgcost[o.contract] = 0.0 
         if o.contract in self.pnl_contract:  # close contract
           #self.time_allpnl_map[o.shot_time] = (np.sum(self.pnl.values()), o.contract)
           strat_id = self.ticker_strat_map[o.contract]
           strat_pair = self.GetStratPair(strat_id)
-          if not self.strat_pnl_map.has_key(strat_id):
-            self.strat_pnl_map[strat_id] = {}
-          self.strat_pnl_map[strat_id][o.shot_time] = np.sum([self.pnl[sp] for sp in strat_pair])
+          if not self.net_strat_pnl_map.has_key(strat_id):
+            self.net_strat_pnl_map[strat_id] = {}
+          self.net_strat_pnl_map[strat_id][o.shot_time] = np.sum([self.net_pnl[sp] for sp in strat_pair])
+          #print(self.net_pnl)
+          #print(self.gross_pnl)
+          if not self.gross_strat_pnl_map.has_key(strat_id):
+            self.gross_strat_pnl_map[strat_id] = {}
+          self.gross_strat_pnl_map[strat_id][o.shot_time] = np.sum([self.gross_pnl[sp] for sp in strat_pair])
       else:
         self.avgcost[o.contract] = abs((self.avgcost[o.contract] * (self.pos[o.contract] - true_size) + o.price * true_size) / self.pos[o.contract])
 
   def Plot(self):
     keys = self.GetStratPnlKey()
     ksize = len(keys)
-    ncol, nrow = 3, 4
+    ncol, nrow = 2, 3
     width = int(math.sqrt(ksize)) + 1 
     height = int(math.sqrt(ksize)) +1
     fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(15,8))
-    fig.tight_layout()
+    #fig.tight_layout()
     count = 0
     for i in range(ksize):
       key = keys[i]
       if count % (ncol*nrow) == 0 and count > 0:
-        fig.savefig('pnl@i' %(count))
-        fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(15,8))
         fig.tight_layout()
+        fig.savefig('pnl@i' %(count))
+        plt.show()
+        fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(15,8))
+        #fig.tight_layout()
       this_ax = ax[int(count/ncol)%nrow, count%ncol]
       this_ax.set_title(key)
-      #print(self.strat_pnl_map[key])
-      pnl_keys = sorted(self.strat_pnl_map[key].keys())
-      print(pnl_keys)
-      this_ax.plot(pnl_keys, [self.strat_pnl_map[key][k] for k in pnl_keys], label='pnl', color='red')
+      net_pnl_keys = sorted(self.net_strat_pnl_map[key].keys())
+      this_ax.plot(net_pnl_keys, [self.net_strat_pnl_map[key][k] for k in net_pnl_keys], label='net_pnl', color='red')
+      gross_pnl_keys = sorted(self.gross_strat_pnl_map[key].keys())
+      this_ax.plot(gross_pnl_keys, [self.gross_strat_pnl_map[key][k] for k in gross_pnl_keys], label='gross_pnl', color='black')
       twin_ax = this_ax.twinx()
       data_keys = sorted(self.strat_data_map[key].keys())
-      print(data_keys)
       twin_ax.plot(data_keys, [self.strat_data_map[key][k] for k in data_keys], label='strat_data', color='blue', alpha=0.3)
       this_ax.legend()
       twin_ax.legend()
       count += 1
+    fig.tight_layout()
     fig.savefig('pnl@%i' %(count))
     plt.show()
       
-    '''
-    realtime_list = sorted(self.time_allpnl_map.items(), key=lambda x: x[0])
-    #plt.plot([ r[0] for r in realtime_list ], [ r[1][0] for r in realtime_list ], label=cfg_str)
-    plt.plot([r[1][0] for r in realtime_list], label="pnl")
-    plt.twinx()
-    plt.plot(self.mid, label="mid")
-    plt.title('pnl curve')
-    plt.legend(loc='upper left')
-    plt.show()
-    '''
-
   def Report(self):
     pass
 
