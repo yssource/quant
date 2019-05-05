@@ -21,6 +21,7 @@ class MarketSnapshot:
   def Filter(self):
     self.ticker = self.ticker.split('\0')[0]
     self.time_str = self.time_str.split('\0')[0]
+    return self
 
   def construct(self, string):
     space_count = 0 
@@ -131,7 +132,7 @@ class MarketSnapshot:
       return True
 
   def Show(self):
-    self.Filter()
+    self = self.Filter()
     split_char = ' '
     show_content = ""
     if self.time == -1:
@@ -163,7 +164,7 @@ class MarketSnapshot:
     print(show_content)
 
   def to_csv(self):
-    Filter()
+    self = self.Filter()
     split_char = ','
     show_content = ""
     if self.time == -1:
