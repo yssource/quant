@@ -14,11 +14,16 @@ class Order:
     self.status = -1
     self.offset=-1
     self.tbd=''
+    action_list = ['Uninited', 'NewOrder', 'ModOrder', 'CancelOrder', 'QueryPos', 'PlainText']
+    status_list = ['Uninited', 'SubmitNew', 'New', 'Rejected', 'Modifying', 'Cancelling', 'Cancelled', 'CancelRej', 'Pfilled', 'Filled', 'Sleep']
+    self.action_map = {i:action_list[i] for i in range(len(action_list))}
+    self.status_map = {i:status_list[i] for i in range(len(status_list))}
 
   def Filter(self):
     self.tbd = self.tbd.split('\0')[0]
     self.contract = self.contract.split('\0')[0]
     self.order_ref = self.order_ref.split('\0')[0]
+    return self
 
   def construct(self, s):
     content = s.split(' ')
@@ -49,7 +54,7 @@ class Order:
       return False
 
   def Show(self, split_c=' '):
-    self.Filter()
+    self = self.Filter()
     show_str = ''
     show_str += str(self.shot_time)
     show_str += split_c   
@@ -62,9 +67,9 @@ class Order:
     show_str += str(self.size)
     show_str += split_c   
     show_str += str(self.traded_size)
-    show_str += split_c   
+    show_str += split_c
     show_str += "BUY" if self.side == 1 else "SELL"
-    show_str += split_c   
+    show_str += split_c
     show_str += str(self.action)
     show_str += split_c   
     show_str += self.order_ref
