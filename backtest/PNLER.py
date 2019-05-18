@@ -91,7 +91,9 @@ class BackTester:
   def RunOrder(self):
     for i in range(self.order_file_size):
       o = self.reader.read_border(i)
-      #o.Show()
+      if o.action == 4:
+        o.Show()
+        continue
       true_size = (o.size if o.side == 1 else -o.size)
       if not self.pos.has_key(o.contract):
         self.pos[o.contract] = 0 
@@ -116,8 +118,6 @@ class BackTester:
           if not self.net_strat_pnl_map.has_key(strat_id):
             self.net_strat_pnl_map[strat_id] = {}
           self.net_strat_pnl_map[strat_id][o.shot_time] = np.sum([self.net_pnl[sp] for sp in strat_pair])
-          #print(self.net_pnl)
-          #print(self.gross_pnl)
           if not self.gross_strat_pnl_map.has_key(strat_id):
             self.gross_strat_pnl_map[strat_id] = {}
           self.gross_strat_pnl_map[strat_id][o.shot_time] = np.sum([self.gross_pnl[sp] for sp in strat_pair])
@@ -143,12 +143,15 @@ class BackTester:
         #fig.tight_layout()
       this_ax = ax[int(count/ncol)%nrow, count%ncol]
       this_ax.set_title(key)
+      data_keys = sorted(self.strat_data_map[key].keys())
+      self.net_strat_pnl_map[key][np.min(data_keys)-10] = 0.0
+      self.gross_strat_pnl_map[key][np.min(data_keys)-10] = 0.0
       net_pnl_keys = sorted(self.net_strat_pnl_map[key].keys())
-      this_ax.plot(net_pnl_keys, [self.net_strat_pnl_map[key][k] for k in net_pnl_keys], label='net_pnl', color='red')
       gross_pnl_keys = sorted(self.gross_strat_pnl_map[key].keys())
+      print(net_pnl_keys)
+      this_ax.plot(net_pnl_keys, [self.net_strat_pnl_map[key][k] for k in net_pnl_keys], label='net_pnl', color='red')
       this_ax.plot(gross_pnl_keys, [self.gross_strat_pnl_map[key][k] for k in gross_pnl_keys], label='gross_pnl', color='black')
       twin_ax = this_ax.twinx()
-      data_keys = sorted(self.strat_data_map[key].keys())
       twin_ax.plot(data_keys, [self.strat_data_map[key][k] for k in data_keys], label='strat_data', color='blue', alpha=0.3)
       this_ax.legend()
       twin_ax.legend()
