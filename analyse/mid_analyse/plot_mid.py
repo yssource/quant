@@ -2,7 +2,6 @@ import time
 start_sec = time.time()
 import matplotlib.pyplot as plt
 from market_snapshot import *
-import build_align_map as bam
 import sys
 import numpy as np
 import pandas as pd

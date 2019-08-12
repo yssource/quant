@@ -1,6 +1,7 @@
 import struct
 import matplotlib.pyplot as plt
 from Reader import *
+from Trader import *
 import sys
 sys.path.append('/root/hft/external/common/lib/cpp_py')
 from caler import *
@@ -29,8 +30,18 @@ class BackTester:
     self.Caler = CALER(contract_config_path)
 
   def GetStratPair(self, s):
-    exec('temp=' + s)
-    return temp
+    #exec('temp=' + s)
+    #return temp
+    return s.split('|')
+
+  def GetCon(self, s):
+    con = ''
+    for c in s:
+      if not c.isdigit():
+        con += c
+      else:
+        break;
+    return con
 
   def GetStratPnlKey(self):
     return self.net_strat_pnl_map.keys()
@@ -44,6 +55,7 @@ class BackTester:
     self.shot_file_size = self.reader.get_shotsize()
 
   def load_binary_strat(self, file_path):
+    start_sec = time.time()
     self.reader.load_strat_file(file_path)
     self.strat_file_size = self.reader.get_stratsize()
     for i in range(self.strat_file_size):
@@ -51,9 +63,11 @@ class BackTester:
       self.pnl_contract.add(self.GetStratPair(strat.ticker)[-1])
       for c in self.GetStratPair(strat.ticker):
         self.ticker_strat_map[c] = strat.ticker
+        #self.ticker_strat_map[c] = self.GetCon(c)
       if not self.strat_data_map.has_key(strat.ticker):
         self.strat_data_map[strat.ticker] = {}
       self.strat_data_map[strat.ticker][strat.time] = strat.last_trade
+    print('load start cost ' + str(time.time()-start_sec))
 
   def load_csv_data(self, file_path):
     pass
@@ -91,8 +105,12 @@ class BackTester:
   def RunOrder(self):
     for i in range(self.order_file_size):
       o = self.reader.read_border(i)
+      o.Show()
       if o.action == 4:
-        o.Show()
+        print('passing order %s' %(o.order_ref))
+        continue
+      if o.shot_time < 156549195 or o.send_time < 156549195:
+        print('passing order %s' %(o.order_ref))
         continue
       true_size = (o.size if o.side == 1 else -o.size)
       if not self.pos.has_key(o.contract):
@@ -126,21 +144,20 @@ class BackTester:
 
   def Plot(self):
     keys = self.GetStratPnlKey()
+    print keys
     ksize = len(keys)
     ncol, nrow = 2, 3
     width = int(math.sqrt(ksize)) + 1 
     height = int(math.sqrt(ksize)) +1
     fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(15,8))
-    #fig.tight_layout()
     count = 0
     for i in range(ksize):
       key = keys[i]
       if count % (ncol*nrow) == 0 and count > 0:
-        fig.tight_layout()
         fig.savefig('pnl@i' %(count))
+        fig.tight_layout()
         plt.show()
         fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(15,8))
-        #fig.tight_layout()
       this_ax = ax[int(count/ncol)%nrow, count%ncol]
       this_ax.set_title(key)
       data_keys = sorted(self.strat_data_map[key].keys())
@@ -148,16 +165,17 @@ class BackTester:
       self.gross_strat_pnl_map[key][np.min(data_keys)-10] = 0.0
       net_pnl_keys = sorted(self.net_strat_pnl_map[key].keys())
       gross_pnl_keys = sorted(self.gross_strat_pnl_map[key].keys())
-      print(net_pnl_keys)
       this_ax.plot(net_pnl_keys, [self.net_strat_pnl_map[key][k] for k in net_pnl_keys], label='net_pnl', color='red')
       this_ax.plot(gross_pnl_keys, [self.gross_strat_pnl_map[key][k] for k in gross_pnl_keys], label='gross_pnl', color='black')
-      twin_ax = this_ax.twinx()
-      twin_ax.plot(data_keys, [self.strat_data_map[key][k] for k in data_keys], label='strat_data', color='blue', alpha=0.3)
+      print(self.gross_pnl)
+      print(self.gross_strat_pnl_map)
+      #twin_ax = this_ax.twinx()
+      #twin_ax.plot(data_keys, [self.strat_data_map[key][k] for k in data_keys], label='strat_data', color='blue', alpha=0.3)
       this_ax.legend()
-      twin_ax.legend()
+      #twin_ax.legend()
       count += 1
-    fig.tight_layout()
     fig.savefig('pnl@%i' %(count))
+    fig.tight_layout()
     plt.show()
       
   def Report(self):
@@ -171,9 +189,9 @@ class BackTester:
 
 def main():
   bt = BackTester()
+  bt.load_binary_strat('/root/hft/build/bin/mid.dat')
   bt.load_binary_order("/root/hft/build/bin/order.dat")
   #bt.load_binary_shot("/running/quant/data/Ali/2019-03-07/data_binary.dat")
-  bt.load_binary_strat('/root/hft/build/bin/mid.dat')
   bt.Run()
   bt.Plot()
 

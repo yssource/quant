@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from market_snapshot import *
 import numpy as np
 import pandas as pd
 import sys
@@ -44,11 +45,24 @@ def HandleTime(t, with_tz_diff):
       print('unknown unix time format '+ t)
       return None
 
-def GetDF(file_path, ask_name, bid_name, time_name, tz_diff=False):
+def GetDF(file_path, ask_name, bid_name, time_name, tz_diff=False, header=False, using_name=None, ticker_filter=None):
   contract = file_path.split('/')[-1].split('.')[0]
   if not os.path.exists(file_path):
     return pd.DataFrame([])
-  df = pd.read_csv(file_path)
+  if os.path.getsize(file_path) < 100:
+    return pd.DataFrame([])
+  df = None
+  if header == False:
+    df = pd.read_csv(file_path, header=None)
+    #print(df)
+    shot = MarketSnapshot()
+    if len(df.columns) != len(shot.get_columns()):
+      return pd.DataFrame([])
+    df.columns = shot.get_columns()
+  else:
+    df = pd.read_csv(file_path)
+  if ticker_filter != None:
+    df = df[df['ticker']==ticker_filter]
   check_list = [ask_name, bid_name, time_name]
   for cl in check_list:
     if cl not in df.columns:
@@ -59,12 +73,15 @@ def GetDF(file_path, ask_name, bid_name, time_name, tz_diff=False):
   df = df[df[bid_name] > 0.001]
   df = df[df[ask_name] > 0.001]
   df = df.reset_index()
-  df[contract] = (df[ask_name] + df[bid_name]) / 2
+  if using_name == None:
+    df[contract] = (df[ask_name] + df[bid_name]) / 2
+  else:
+    df[using_name] = (df[ask_name] + df[bid_name]) / 2
   df['time'] = [HandleTime(df[time_name][i], tz_diff) for i in range(len(df))]
   df = df[df['time'] <= 15*3600]
   df = df[df['time'] >= 9*3600]
   df = df.reset_index()
-  columns = [time_name, 'time', contract]
+  columns = [time_name, 'time', contract if using_name == None else "mid"]
   return df[columns]
 
 def Merge(df1, df2):
@@ -98,7 +115,68 @@ def Plot(df, main, hedge, date, ax, all_mid):
   ax.axvline(int(train_ratio*len(d)), c ='black')
   ax.legend()
 
+aname = "asks[0]"
+bname = "bids[0]"
+tname = "time_sec"
+
+def SplitCon(contract):
+  pos = 0
+  for i,c in enumerate(contract):
+    if c.isdigit() == True:
+      pos = i
+      break
+  con = contract[:pos]
+  date = contract[pos:]
+  return con, date
+
+def PlotSingle(file_list, ticker_filter=None):
+  start = file_list[0].split('/')[-1].split('.')[0]
+  end = file_list[-1].split('/')[-1].split('.')[0]
+  cs, ds = SplitCon(start)
+  cd, dd = SplitCon(end)
+  if cs != cd:
+    print('diff con %s %s' %(cs, cd))
+    sys.exit(1)
+  title = "ni from %s-%s" %(ds, dd)
+  all_mid = []
+  for f in file_list:
+    df = GetDF(f, aname, bname, tname, using_name='mid', ticker_filter=ticker_filter)
+    if len(df) == 0:
+      print('ignoring %s' %(f))
+      continue
+    all_mid.extend(df['mid'].tolist())
+  plt.plot(all_mid)
+  plt.title(title)
+  plt.show()
+
+def PlotSingleWithTime(file_list, ticker_filter=None):
+  start = file_list[0].split('/')[-1].split('.')[0]
+  end = file_list[-1].split('/')[-1].split('.')[0]
+  cs, ds = SplitCon(start)
+  cd, dd = SplitCon(end)
+  if cs != cd:
+    print('diff con %s %s' %(cs, cd))
+    sys.exit(1)
+  title = "%s from %s-%s" %("ni"if ticker_filter==None else ticker_filter, ds, dd)
+  all_mid = []
+  all_time = []
+  for f in file_list:
+    df = GetDF(f, aname, bname, tname, using_name='mid', ticker_filter=ticker_filter)
+    if len(df) == 0:
+      print('ignoring %s' %(f))
+      continue
+    df = df.sort_values(by='time').reset_index()
+    all_mid.extend(df['mid'].tolist())
+    all_time.extend(df['time_sec'].tolist())
+  print(all_time)
+  plt.plot(all_time, all_mid)
+  plt.title(title)
+  plt.show()
+
 def PlotSpread(main_path, hedge_path, multiplier=1):
+  ask_name = aname
+  bid_name = bname
+  time_name = tname
   all_mid = []
   if len(main_path) != len(hedge_path):
     print('different file length! %d %d' %(len(main_path), len(hedge_path)))
@@ -116,13 +194,13 @@ def PlotSpread(main_path, hedge_path, multiplier=1):
   main = ''
   hedge= ''
   for i in range(len(main_path)):
-    df1 = GetDF(main_path[i], 'AskPrice1', 'BidPrice1', 'TimeStamp')
-    df2 = GetDF(hedge_path[i], 'AskPrice1', 'BidPrice1', 'MicroTime')
+    df1 = GetDF(main_path[i], ask_name, bid_name, time_name)
+    df2 = GetDF(hedge_path[i], ask_name, bid_name, time_name)
     if len(df1) == 0:
-      print(main_path[i] + ' not found')
+      print(main_path[i] + ' main not found')
       continue
     elif len(df2) == 0:
-      print(hedge_path[i] + ' not found')
+      print(hedge_path[i] + ' hedge not found')
       continue
     if count % (ncol*nrow) == 0 and count > 0:
       fig.savefig('singleday[%s-%s]@%s' %(main, hedge, str(count)))
@@ -142,13 +220,15 @@ def PlotSpread(main_path, hedge_path, multiplier=1):
     df[main] = df[main]*multiplier
     Plot(df, main, hedge, main_date, this_ax, all_mid)
     count += 1
-  fig.savefig('singleday[%s-%s]@%s' %(main, hedge, str(count)))
-  plt.show()
-  plt.title('mid delta of [%s %s] from %s to %s' %(main, hedge, date[0], date[-1]))
-  plt.plot(all_mid)
-  plt.savefig('all_mid[%s-%s] from %s-%s' %(main, hedge, date[0], date[-1]))
+  if count > 0:
+    fig.savefig('singleday[%s-%s]@%s' %(main, hedge, str(count)))
+    plt.show()
+    #print("main %s hegde %s date[0] %s date[-1] %s" %(main, hedge, date[0], date[-1]))
+    plt.title('mid delta of [%s %s] from %s to %s' %(main, hedge, date[0], date[-1]))
+    plt.plot(all_mid)
+    plt.savefig('all_mid[%s-%s] from %s-%s' %(main, hedge, date[0], date[-1]))
 
-def GetFuturePeriod(month, year=2019):
+def GetFuturePeriod(month, year=2019, sep = '-'):
   valid_day = []
   last_day = [i for i in range(16,32)]
   this_day = [i for i in range(1, 16)]
@@ -160,24 +240,47 @@ def GetFuturePeriod(month, year=2019):
     last_month = month- 1
   last_month_str = '%02d' %(last_month)
   month_str = '%02d' %(month)
-  valid_day.extend([str(last_year) + '/' + last_month_str + '/' + '%02d'%(ld) for ld in last_day])
-  valid_day.extend([str(year) + '/' + month_str + '/' + '%02d'%(ld) for ld in this_day])
+  valid_day.extend([str(last_year) + sep + last_month_str + sep + '%02d'%(ld) for ld in last_day])
+  valid_day.extend([str(year) + sep + month_str + sep + '%02d'%(ld) for ld in this_day])
   return valid_day
 
+'''
 def main():
-  month = ['01', '02', '03']
+  month = ['01', '02', '03', '04']
+  date = ['18' + str(i).zfill(2) for i in range(1, 13)]
+  date.extend(['190'+str(i) for i in range(1,8)])
   contract_pair = [('IC', '510500'), ('IH', '510050'), ('IF','510300')]
-  pairs = [('510050', 'IH1903'), ('510500', 'IC1903'), ('510300', 'IF1903')]
+  contract_pair = [('IC', 'IC'), ('IH', 'IH'), ('IF','IF')]
+  pairs = [('510050', 'IH8888'), ('510500', 'IC8888'), ('510300', 'IF8888')]
   pairs = [(cp[1], cp[0]+'19'+str(m)) for cp in contract_pair for m in month]
-  main_prefix = '/shared/xyang/Data/MarketData_from_dat/2019/'
-  hedge_prefix = '/shared/xyang/Data/future_ctp/2019/'
-  main_prefix = '/shared/xyang/Data/MarketData_from_dat/'
-  hedge_prefix = '/shared/xyang/Data/future_ctp/'
+  pairs = [(cp[0]+'19'+str(m), cp[1]+'19'+str(int(m)+2).zfill(2)) for cp in contract_pair for m in month]
+  pairs = [("ni19"+m, "anything")for m in month]
+  pairs = [("ni"+d, "anything")for d in date]
+  #main_prefix = '/shared/xyang/Data/MarketData_from_dat/2019/'
+  #hedge_prefix = '/shared/xyang/Data/future_ctp/2019/'
+  #main_prefix = '/shared/xyang/Data/MarketData_from_dat/'
+  #hedge_prefix = '/shared/xyang/Data/future_ctp/'
+  main_prefix = '/running/'
+  hedge_prefix = '/running/'
+  all_list = []
   for p in pairs:
-    period = GetFuturePeriod(int(p[1][-1:]))
+    #period = GetFuturePeriod(int(p[0][-1:]))
+    period = GetFuturePeriod(month=int(p[0][-2:]), year=2000+int(p[0][-4:-2]))
     main_list = [main_prefix+d+'/' + p[0] + '.csv' for d in period]
     hedge_list = [hedge_prefix+d+'/' + p[1] + '.csv' for d in period]
-    PlotSpread(main_list, hedge_list, 1000)
+    #PlotSpread(main_list, hedge_list, 1000)
+    #print(main_list)
+    all_list.extend(main_list)
+  PlotSingleWithTime(all_list)
+'''
+# file example crypto2019-08-09.log.gz
+def main():
+  year = ['2019']
+  month = ['06', '07', '08']
+  day = [str(i).zfill(2) for i in range(1, 32)]
+  date = [y+'-'+m+'-'+d for y in year for m in month for d in day]
+  file_list = ['/root/crypto_cache/crypto'+d+'.log.gz' for d in date]
+  PlotSingle(file_list, ticker_filter='ETHUSDT')
 
 if __name__ =='__main__':
   main()
