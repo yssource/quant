@@ -1,4 +1,5 @@
 *~
+*.png
 data.txt
 analyse/data.txt
 .waf*
