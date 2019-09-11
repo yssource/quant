@@ -7,7 +7,7 @@ if __name__ == '__main__':
   mid_time_map = {}
   EM = EmailWorker()
   r = Reader()
-  r.load_shot_file("/today/mid.dat")
+  r.load_shot_file("/root/mid.dat")
   for i in range(r.get_shotsize()):
     shot = r.read_bshot(i)
     ticker = shot.ticker
@@ -19,6 +19,12 @@ if __name__ == '__main__':
       continue
     mid_map[ticker].append(mid)
     mid_time_map[ticker][time] = mid
-  items = mid_time_map.items()
-  plt.plot([i[0] for i in items], [i[1] for i in items])
-  plt.show()
+  tickers = mid_time_map.keys()
+  for t in tickers:
+    items = mid_time_map[t].items()
+    items = sorted(items, key=lambda x:x[0])
+    #plt.plot([i[0] for i in items], [i[1] for i in items])
+    plt.plot(mid_map[tickers[0]])
+    plt.title('%s\'s spread move' % (t))
+    plt.grid()
+    plt.show()
