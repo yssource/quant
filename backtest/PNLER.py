@@ -1,4 +1,6 @@
 import struct
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from Reader import *
 from Trader import *
@@ -122,7 +124,7 @@ class BackTester:
       self.pos[o.contract] += true_size
       is_close = (self.pos[o.contract]*true_size <= 0)
       if is_close == True:
-        this_net_pnl = self.Caler.CalNetPnl(o.contract, self.avgcost[o.contract], abs(pre_pos), o.price, o.size, OrderSide.Buy if o.side==1 else OrderSide.Sell)
+        this_net_pnl = self.Caler.CalNetPnl(o.contract, self.avgcost[o.contract], abs(pre_pos), o.price, o.size, OrderSide.Buy if o.side==1 else OrderSide.Sell, True)
         this_gross_pnl = self.Caler.CalPnl(o.contract, self.avgcost[o.contract], abs(pre_pos), o.price, o.size, OrderSide.Buy if o.side==1 else OrderSide.Sell)
         #print("%s %f %i %f %i %i " %(o.contract, self.avgcost[o.contract], abs(pre_pos), o.price, o.size, o.side))
         self.net_pnl[o.contract] += this_net_pnl
@@ -154,8 +156,8 @@ class BackTester:
     for i in range(ksize):
       key = keys[i]
       if count % (ncol*nrow) == 0 and count > 0:
-        fig.savefig('pnl@i' %(count))
         fig.tight_layout()
+        fig.savefig('pnl@i' %(count))
         plt.show()
         fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(15,8))
       this_ax = ax[int(count/ncol)%nrow, count%ncol]
@@ -174,8 +176,8 @@ class BackTester:
       this_ax.legend()
       #twin_ax.legend()
       count += 1
-    fig.savefig('pnl@%i' %(count))
     fig.tight_layout()
+    fig.savefig('pnl@%i' %(count))
     plt.show()
       
   def Report(self):

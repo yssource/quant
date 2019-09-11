@@ -164,7 +164,7 @@ class MarketSnapshot:
     if f != None:
       f.write(show_content+'\n')
     else:
-      print(show_content+'\n')
+      print(show_content)
 
   def get_columns(self):
     c = []
