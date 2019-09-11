@@ -21,5 +21,4 @@ analyse/data/*
 analyse/report/*
 analyse/report/spread_report/*
 data/*
-report/*
 experiment/simplepred/data.*
