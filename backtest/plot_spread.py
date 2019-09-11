@@ -53,10 +53,12 @@ def GetDF(file_path, ask_name, bid_name, time_name, tz_diff=False, header=False,
     return pd.DataFrame([])
   df = None
   if header == False:
+    #print('reading %s' %(file_path))
     df = pd.read_csv(file_path, header=None)
     #print(df)
     shot = MarketSnapshot()
     if len(df.columns) != len(shot.get_columns()):
+      print('df.columns len %d, shot.columns len %d' % (len(df.columns), len(shot.get_columns())))
       return pd.DataFrame([])
     df.columns = shot.get_columns()
   else:
@@ -134,20 +136,47 @@ def PlotSingle(file_list, ticker_filter=None):
   end = file_list[-1].split('/')[-1].split('.')[0]
   cs, ds = SplitCon(start)
   cd, dd = SplitCon(end)
+  ncol = 3
+  nrow = 4
+  count = 0
   if cs != cd:
     print('diff con %s %s' %(cs, cd))
     sys.exit(1)
-  title = "ni from %s-%s" %(ds, dd)
+  title = "ethusdt high-frequency data from %s-%s" %(ds, dd)
   all_mid = []
+  fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(20,16))
+  fig.tight_layout()#pad=0.1, w_pad=0.1, h_pad=0.1)
   for f in file_list:
+    date = GetDate(f)
+    print('count is %d'%(count))
+    shot = MarketSnapshot()
     df = GetDF(f, aname, bname, tname, using_name='mid', ticker_filter=ticker_filter)
     if len(df) == 0:
       print('ignoring %s' %(f))
       continue
+    if count % (ncol*nrow) == 0 and count > 0:
+      fig.tight_layout()#pad=1.4, w_pad=1.5, h_pad=2.0)
+      fig.savefig('singleday[%s]@%s' %('ni' if ticker_filter == None else ticker_filter, str(count)))
+      fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(15,8))
+      fig.tight_layout()#pad=1.4, w_pad=1.5, h_pad=2.0)
+    this_ax = ax[int(count/ncol)%nrow, count%ncol]
+    this_ax.set_title('ethusdt' if ticker_filter==None else ticker_filter + " " +date)
+    this_ax.set_ylabel('mid price')
+    this_ax.grid()
+    this_ax.plot(df['mid'].tolist())
     all_mid.extend(df['mid'].tolist())
+    count += 1
+  plt.show()
+  plt.ylabel('mid price')
+  plt.grid()
   plt.plot(all_mid)
   plt.title(title)
+  plt.tight_layout()
+  plt.savefig('all data for %s from %s to %s' %('ni' if ticker_filter == None else ticker_filter, start, end))
   plt.show()
+
+def GetDate(file_name):
+  return file_name.split('/')[-1].split('.')[0]
 
 def PlotSingleWithTime(file_list, ticker_filter=None):
   start = file_list[0].split('/')[-1].split('.')[0]
@@ -162,12 +191,23 @@ def PlotSingleWithTime(file_list, ticker_filter=None):
   all_time = []
   for f in file_list:
     df = GetDF(f, aname, bname, tname, using_name='mid', ticker_filter=ticker_filter)
+    date = GetDate(f)
     if len(df) == 0:
       print('ignoring %s' %(f))
       continue
+    if count % (ncol*nrow) == 0 and count > 0:
+      fig.savefig('singleday[%s-%s]@%s' %(main, hedge, str(count)))
+      fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(15,8))
+      fig.tight_layout()
+    this_ax = ax[int(count/ncol)%nrow, count%ncol]
     df = df.sort_values(by='time').reset_index()
+    this_ax.set_title("ni " + date if ticker_filter==None else ticker_filter + " " +date)
+    this_ax.set_ylabel('price')
+    this_ax.grid()
+    this_ax.plot(df['time_sec'].tolist(), df['mid'].tolist())
     all_mid.extend(df['mid'].tolist())
     all_time.extend(df['time_sec'].tolist())
+    count += 1
   print(all_time)
   plt.plot(all_time, all_mid)
   plt.title(title)
@@ -276,11 +316,12 @@ def main():
 # file example crypto2019-08-09.log.gz
 def main():
   year = ['2019']
-  month = ['06', '07', '08']
+  month = ['0'+str(i) for i in range(1,8)]
   day = [str(i).zfill(2) for i in range(1, 32)]
   date = [y+'-'+m+'-'+d for y in year for m in month for d in day]
-  file_list = ['/root/crypto_cache/crypto'+d+'.log.gz' for d in date]
-  PlotSingle(file_list, ticker_filter='ETHUSDT')
+  #file_list = ['/root/crypto_cache/crypto'+d+'.log.gz' for d in date]
+  file_list = ['/running/'+d+'/zn8888.csv' for d in date]
+  PlotSingle(file_list)#, ticker_filter="ETHUSDT")
 
 if __name__ =='__main__':
   main()

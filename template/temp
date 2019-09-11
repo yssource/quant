@@ -1,0 +1,22 @@
+      <table cellspacing="0" border="1px solid black">
+        <h1>First Part-spread</h1>
+        <img border="0" src="/root/pnl.png" alt="Pulpit rock" width="304" height="228">
+        <thead>
+            <tr>
+                <th>First part</th>
+                {% for c in df.columns %}
+                    <th>{{c}}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for id in df.index %}
+            <tr>
+            <th>{{id}}</th>
+            {% for c in df.columns %}
+                <td bgcolor={{color[c][id]}}>{{df[c][id]}}</td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>

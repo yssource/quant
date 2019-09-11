@@ -183,10 +183,10 @@ class BackTester:
 def main():
   bt = BackTester()
   #bt.load_binary_strat('/root/hft/build/bin/mid.dat')
-  bt.load_binary_order("/root/hft/build/bin/order.dat")
+  bt.load_binary_order("/root/order.dat")
   #bt.load_binary_shot("/running/quant/data/Ali/2019-03-07/data_binary.dat")
   bt.Run()
-  #bt.Plot()
+  bt.Plot()
   bt.Report()
 
 if __name__ == '__main__':

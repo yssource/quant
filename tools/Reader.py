@@ -1,6 +1,10 @@
 from common.order import *
 from common.market_snapshot import *
 import struct
+import os
+import pandas as pd
+from algo import *
+import sys
 
 class Reader:
   def __init__(self):
@@ -77,3 +81,63 @@ class Reader:
     order.shot_time = int(shot_sec) + float("0."+str(shot_usec))
     order.send_time = int(send_sec) + float("0."+str(send_usec))
     return order.Filter()
+
+  def GetValidDate(self, path = '/running/'):
+    self.valid_path_list = []
+    date_list = os.listdir(path)
+    for dl in date_list:
+      data_file = path+dl+'/'+'data_binary.dat'
+      if not os.path.exists(data_file):
+        continue
+      if os.path.getsize(data_file) < 100000:  # size < 100M will be ignored
+        continue
+      self.valid_path_list.append(data_file)
+    self.valid_path_list = sorted(self.valid_path_list)
+    return self.valid_path_list
+
+  def LoadOneDF(self, file_path):
+    if not os.path.exists(file_path):
+      print('load df failed: %s not existed' % (file_path))
+      shot = MarketSnapshot()
+      return pd.DataFrame(columns = shot.get_columns())
+    df = pd.read_csv(file_path)
+    shot = MarketSnapshot()
+    df.columns = shot.get_columns()
+    return df
+
+  def Labelling(self, df, future_ws = 50, win = 1, loss = 1, cut_tail = False):
+    # snapshot[50] = slipwinmax()[100]
+    if len(df) == 0:
+      print('labelling passed empty df in!')
+      return df
+    df = df[df['asks[0]'] - df['bids[0]'] > 0]
+    min_move = (df['asks[0]'] - df['bids[0]']).min()
+    self.label_map = {'Flat': 0, 'Buy': 1, 'Sell': 2}
+    if 'label' in df.columns:
+      print('df has labelled!')
+      return df
+    ask_min = list(map(lambda x: -x, GetSlipWindowMax((df['asks[0]']*-1).tolist(), future_ws)))
+    bid_max = GetSlipWindowMax(df['bids[0]'].tolist(), future_ws)
+    #df = df[:-future_ws]
+    df = df.drop([i for i in range(len(df)-future_ws, len(df))])
+    ask_min = ask_min[future_ws:]
+    bid_max = bid_max[future_ws:]
+    #print('len(df)=%d, len(ask_min)=%d' % (len(df), len(bid_max)))
+    df.insert(len(df.columns), 'label', 0)
+    df.loc[df['bids[0]']-ask_min >= win*min_move, 'label'] = self.label_map['Sell']
+    df.loc[bid_max-df['asks[0]'] >= win*min_move, 'label'] = self.label_map['Buy']
+    '''
+    print('ask_min:%s'%(str(ask_min[0:10])))
+    print('bid_max:%s'%(str(bid_max[0:10])))
+    print('ask:%s'%(str(df[0:10]['asks[0]'].tolist())))
+    print('bid:%s'%(str(df[0:10]['bids[0]'].tolist())))
+    print('sell profit:%s'%(str((df['bids[0]']-ask_min)[0:10].tolist())))
+    print('buy  profit:%s'%(str((bid_max-df['asks[0]'])[0:10].tolist())))
+    print('label:%s'%(str(df[:10]['label'].tolist())))
+    #sys.exit(1)
+    '''
+    if cut_tail:
+      df.loc[[i for i in range(500)], 'label'] = self.label_map['Flat']
+      df.loc[[i for i in range(len(df)-500, len(df))], 'label'] = self.label_map['Flat']
+    #print('after labelling: %.1f%% are buy, %.1f%% are sell, %.1f%% are flat' %((df['label']==self.label_map['Buy']).mean()*100, (df['label']==self.label_map['Sell']).mean()*100, (df['label']==self.label_map['Flat']).mean()*100))
+    return df
