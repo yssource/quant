@@ -2,6 +2,8 @@
 from EmailWorker import *
 from Reader import *
 import math
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import subprocess
 from exchangeinfo import *
@@ -9,7 +11,7 @@ from Trader import *
 import datetime
 
 def LoadShot(r, mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map):
-  r.load_shot_file("/root/mid.dat")
+  r.load_shot_file("/today/mid.dat")
   for i in range(r.get_shotsize()):
     shot = r.read_bshot(i)
     ticker = shot.ticker
@@ -65,8 +67,8 @@ def SaveSpreadPng(mid_map, mid_time_map, png_path):
 
 def TradeReport(trade_path):
   trader = Trader()
-  #command = 'cd/today; cat log/order.log | grep Filled > filled; cat log/order_night.log | grep Filled >> filled'
-  #command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
+  command = 'cat /today/log/order.log | grep Filled > /today/filled; cat /today/log/order_night.log | grep Filled >> /today/filled'
+  command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
   with open(trade_path) as f:
     ei = ExchangeInfo()
     for l in f:
