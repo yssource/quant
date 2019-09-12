@@ -51,6 +51,7 @@ class Order:
       self.tbd=content[14]
       return True
     else:
+      print('len is %d'%(len(content)))
       return False
 
   def Show(self, split_c=' '):
@@ -76,3 +77,10 @@ class Order:
     show_str += split_c   
     show_str += self.tbd
     print(show_str)
+
+if __name__=='__main__':
+  o = Order()
+  with open('/root/order.log') as f:
+    for l in f:
+      o.construct(l)
+      o.Show()
