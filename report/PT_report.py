@@ -66,11 +66,11 @@ def SaveSpreadPng(mid_map, mid_time_map, png_path):
   plt.tight_layout()
   plt.savefig(png_path)
 
-def TradeReport(trade_path, cancel_path):
+def TradeReport(date_prefix, trade_path, cancel_path):
   trader = Trader()
-  command = 'cat /today/log/order.log | grep Filled > ' +  trade_path +'; cat /today/log/order_night.log | grep Filled >> ' + trade_path
+  command = 'cat '+date_prefix+'log/order.log | grep Filled > ' +  trade_path +'; cat '+ date_prefix + 'log/order_night.log | grep Filled >> ' + trade_path
   command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
-  command = 'cat /today/log/order.log | grep Cancelled > '+ cancel_path +'; cat /today/log/order_night.log | grep Cancelled >> '+ cancel_path
+  command = 'cat '+date_prefix+'log/order.log | grep Cancelled > '+ cancel_path +'; cat '+date_prefix+'log/order_night.log | grep Cancelled >> '+ cancel_path
   command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
   with open(trade_path) as f:
     ei = ExchangeInfo()
@@ -128,11 +128,12 @@ if __name__ == '__main__':
   down_bound_map = {}
   mean_map = {}
   EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com")
-  LoadShot("/root/mid.dat", mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map)
+  date_prefix = '/today/'
+  LoadShot(date_prefix+'mid.dat', mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map)
   strat_keys = mid_map.keys()
-  png_path = '/today/spread_move.png'
+  png_path = date_prefix+'spread_move.png'
   SaveSpreadPng(mid_map, mid_time_map, png_path)
-  trade_df, strat_df = TradeReport('/today/filled', '/today/cancelled')
+  trade_df, strat_df = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled')
   vol_df = GenVolReport(mid_map, single_map)
-  bt_df, bt_strat_df = GenBTReport('/today/order_backtest.dat')
+  bt_df, bt_strat_df = GenBTReport(date_prefix+'order_backtest.dat')
   EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df), png_list=[png_path])
