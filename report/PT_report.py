@@ -8,8 +8,9 @@ from exchangeinfo import *
 from Trader import *
 import datetime
 
-def LoadShot(r, mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map):
-  r.load_shot_file("/root/mid.dat")
+def LoadShot(mid_file, mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map):
+  r = Reader()
+  r.load_shot_file(mid_file)
   for i in range(r.get_shotsize()):
     shot = r.read_bshot(i)
     ticker = shot.ticker
@@ -65,8 +66,8 @@ def SaveSpreadPng(mid_map, mid_time_map, png_path):
 
 def TradeReport(trade_path):
   trader = Trader()
-  #command = 'cd/today; cat log/order.log | grep Filled > filled; cat log/order_night.log | grep Filled >> filled'
-  #command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
+  command = 'cd/today; cat log/order.log | grep Filled > filled; cat log/order_night.log | grep Filled >> filled'
+  command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
   with open(trade_path) as f:
     ei = ExchangeInfo()
     for l in f:
@@ -98,6 +99,15 @@ def GenVolReport(mid_map, single_map):
         rdf[k][c] = round(rdf[k][c], 1)
   return rdf
 
+def GenBTReport(bt_file_path):
+  r = Reader()
+  t = Trader()
+  r.load_order_file(bt_file_path)
+  for i in range(r.get_ordersize()):
+    o = r.read_border(i)
+    t.RegisterOneTrade(o.contract, o.size if o.side==0 else -o.size, o.price)
+  return t.GenDFReport()
+
 if __name__ == '__main__':
   mid_map = {}
   mid_time_map = {}
@@ -106,12 +116,12 @@ if __name__ == '__main__':
   down_bound_map = {}
   mean_map = {}
   EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com")
-  r = Reader()
-  LoadShot(r, mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map)
+  LoadShot("/root/mid.dat", mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map)
   strat_keys = mid_map.keys()
   png_path = '/today/spread_move.png'
   SaveSpreadPng(mid_map, mid_time_map, png_path)
   trader, trade_df = TradeReport('/today/filled')
   strat_df = trader.GenStratReport(trade_df)
   vol_df = GenVolReport(mid_map, single_map)
-  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df), png_list=[png_path])
+  bt_df = GenBTReport('/today/order_backtest.dat')
+  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df), png_list=[png_path])

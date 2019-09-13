@@ -71,6 +71,27 @@
       </td>
       </tr>
       </table>
+      <h3>BackTest</h3>
+      <table cellspacing="0" border="1px solid black">
+        <thead>
+          <tr>
+              <th>index</th>
+              {% for c in bt_df.columns %}
+                <th>{{c}}</th>
+              {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for id in bt_df.index %}
+            <tr>
+            <th>{{id}}</th>
+              {% for c in bt_df.columns %}
+                <td>{{bt_df[c][id]}}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       <h3>Volatility(std)</h3>
       <table cellspacing="0" border="1px solid black">
         <thead>
