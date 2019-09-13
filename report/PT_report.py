@@ -129,6 +129,7 @@ if __name__ == '__main__':
   mean_map = {}
   EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com")
   date_prefix = '/today/'
+  #date_prefix = '/running/2019-09-11/'
   LoadShot(date_prefix+'mid.dat', mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map)
   strat_keys = mid_map.keys()
   png_path = date_prefix+'spread_move.png'
