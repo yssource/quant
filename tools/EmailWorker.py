@@ -56,8 +56,11 @@ class EmailWorker:
 
   def SendHtml(self, subject='Default Subject', content="This is a test", png_list=[]):
     try:
-      mail_client = smtplib.SMTP(self.host)
+      mail_client = smtplib.SMTP_SSL(self.host, port=465)
+      #mail_client = smtplib.SMTP('smtpdm.aliyun.com')
+      print('email connet host ok')
       mail_client.login(self.send_mail, self.send_pass)
+      print('email login ok')
       # create msg
       msg = MIMEMultipart('mixed')
       msg.attach(MIMEText(content, 'html', 'utf-8'))

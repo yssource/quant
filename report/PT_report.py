@@ -2,6 +2,8 @@
 from EmailWorker import *
 from Reader import *
 import math
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import subprocess
 from exchangeinfo import *
@@ -64,20 +66,29 @@ def SaveSpreadPng(mid_map, mid_time_map, png_path):
   plt.tight_layout()
   plt.savefig(png_path)
 
-def TradeReport(trade_path):
+def TradeReport(trade_path, cancel_path):
   trader = Trader()
-  command = 'cd/today; cat log/order.log | grep Filled > filled; cat log/order_night.log | grep Filled >> filled'
+  command = 'cat /today/log/order.log | grep Filled > ' +  trade_path +'; cat /today/log/order_night.log | grep Filled >> ' + trade_path
+  command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
+  command = 'cat /today/log/order.log | grep Cancelled > '+ cancel_path +'; cat /today/log/order_night.log | grep Cancelled >> '+ cancel_path
   command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
   with open(trade_path) as f:
     ei = ExchangeInfo()
     for l in f:
       ei.construct(l)
       trader.RegisterOneTrade(ei.contract, int(ei.trade_size) if ei.side == 0 else -int(ei.trade_size), float(ei.trade_price))
+  df = trader.GenDFReport()
   #trader.Summary()
-  return trader, trader.GenDFReport()
+  df.insert(len(df.columns), 'cancelled', 0)
+  with open(cancel_path) as f:
+    ei = ExchangeInfo()
+    for l in f:
+      ei.construct(l)
+      df.loc[ei.contract, 'cancelled'] = df.loc[ei.contract, 'cancelled'] + 1
+  return df, trader.GenStratReport()
 
 def GenVolReport(mid_map, single_map):
-  caler = CALER('/root/hft/config/backtest/contract.config')
+  caler = CALER('/root/hft/config/contract/contract.config')
   v = {}
   i_rate = 0.2
   col = [str((i+1)*i_rate*100)+'%' for i in range(int(1/i_rate))]
@@ -105,8 +116,9 @@ def GenBTReport(bt_file_path):
   r.load_order_file(bt_file_path)
   for i in range(r.get_ordersize()):
     o = r.read_border(i)
-    t.RegisterOneTrade(o.contract, o.size if o.side==0 else -o.size, o.price)
-  return t.GenDFReport()
+    if o.price > 0 and abs(o.size) > 0:
+      t.RegisterOneTrade(o.contract, o.size if o.side==1 else -o.size, o.price)
+  return t.GenDFReport(), t.GenStratReport()
 
 if __name__ == '__main__':
   mid_map = {}
@@ -120,8 +132,7 @@ if __name__ == '__main__':
   strat_keys = mid_map.keys()
   png_path = '/today/spread_move.png'
   SaveSpreadPng(mid_map, mid_time_map, png_path)
-  trader, trade_df = TradeReport('/today/filled')
-  strat_df = trader.GenStratReport(trade_df)
+  trade_df, strat_df = TradeReport('/today/filled', '/today/cancelled')
   vol_df = GenVolReport(mid_map, single_map)
-  bt_df = GenBTReport('/today/order_backtest.dat')
-  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df), png_list=[png_path])
+  bt_df, bt_strat_df = GenBTReport('/today/order_backtest.dat')
+  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df), png_list=[png_path])

@@ -72,6 +72,9 @@
       </tr>
       </table>
       <h3>BackTest</h3>
+      <table>
+      <tr>
+      <td style='vertical-align:top'>
       <table cellspacing="0" border="1px solid black">
         <thead>
           <tr>
@@ -91,6 +94,31 @@
             </tr>
           {% endfor %}
         </tbody>
+      </table>
+      </td>
+      <td style='vertical-align:top'>
+      <table cellspacing="0" border="1px solid black">
+        <thead>
+          <tr>
+              <th>index</th>
+              {% for c in bt_strat_df.columns %}
+                <th>{{c}}</th>
+              {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for id in bt_strat_df.index %}
+            <tr>
+            <th>{{id}}</th>
+              {% for c in bt_strat_df.columns %}
+                <td>{{bt_strat_df[c][id]}}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </td>
+      </tr>
       </table>
       <h3>Volatility(std)</h3>
       <table cellspacing="0" border="1px solid black">

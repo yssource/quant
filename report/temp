@@ -1,9 +1,0 @@
-def GenBTReport(bt_file_path):
-  r = Reader()
-  t = Trader()
-  r.load_order_file(bt_file_path)
-  for i in range(r.get_ordersize()):
-    o = r.read_border(i)
-    t.RegisterOneTrade(o.contract, o.size if o.side==0 else -o.size, o.price)
-  return t.GenDFReport()
-
