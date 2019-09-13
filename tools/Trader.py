@@ -10,7 +10,7 @@ def GetCon(ticker):
 
 class Trader:
   def __init__(self, enable_fee = False, fee_rate=0.0, record=False):
-    self.caler = CALER('/root/hft/config/backtest/contract.config')
+    self.caler = CALER('/root/hft/config/contract/contract.config')
     self.pos = {}
     self.avgcost = {}
     self.pnl = {}
