@@ -67,9 +67,9 @@ class EmailWorker:
       msg['Subject'] = Header('[自动邮件]'+subject, 'utf-8')  # subject
       msg['From'] = self.send_mail
       msg['To'] = self.recv_mail
-      for pl in png_list:
+      for i, pl in enumerate(png_list):
         att = MIMEImage(open(pl, 'rb').read())
-        att.add_header('Content-ID','<image1>')
+        att.add_header('Content-ID','<image%d>'%(i))
         msg.attach(att)
       mail_client.sendmail(self.send_mail, self.recv_mail, msg.as_string())
       mail_client.quit()

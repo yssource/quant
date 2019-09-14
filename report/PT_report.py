@@ -10,7 +10,7 @@ from exchangeinfo import *
 from Trader import *
 import datetime
 
-def LoadShot(mid_file, order_file, mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map):
+def LoadShot(mid_file, order_file, mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, single_map):
   r = Reader()
   r.load_shot_file(mid_file)
   r.load_order_file(order_file)
@@ -24,53 +24,77 @@ def LoadShot(mid_file, order_file, mid_time_map, single_time_map, up_bound_time_
     mean_down = shot.bids[2]
     mean = (mean_up+mean_down)/2
     time = shot.time
-    if ticker not in mid_map:
-      #mid_map[ticker] = [mid]
+    if ticker not in mid_time_map:
+      mid_map[ticker] = [mid]
+      single_map[ticker] = [(shot.bids[3], shot.asks[3])]
       mid_time_map[ticker] = {time:mid}
-      single_map[ticker] = {time:[(shot.bids[3], shot.asks[3])]}
-      up_bound_map[ticker] = {time:up}
-      down_bound_map[ticker] = {time:down}
-      mean_map[ticker] = {time:mean}
+      single_time_map[ticker] = {time:[(shot.bids[3], shot.asks[3])]}
+      up_bound_time_map[ticker] = {time:up}
+      down_bound_time_map[ticker] = {time:down}
+      mean_time_map[ticker] = {time:mean}
       continue
-    up_bound_time_map[ticker] = up
-    down_bound_time_map[ticker] = down
-    mean_time_map[ticker] = mean
-    #mid_map[ticker].append(mid)
+    up_bound_time_map[ticker][time] = up
+    down_bound_time_map[ticker][time] = down
+    mean_time_map[ticker][time] = mean
+    mid_map[ticker].append(mid)
+    single_map[ticker].append((shot.bids[3], shot.asks[3]))
     mid_time_map[ticker][time] = mid
-    single_time_map[ticker] = (shot.bids[3], shot.asks[3])
+    single_time_map[ticker][time] = (shot.bids[3], shot.asks[3])
   for i in range(r.get_ordersize()):
     o = r.read_border(i)
     ticker = o.contract
     if ticker not in order_map:
-      order_map[ticker] = [order.shot_time]
+      order_map[ticker] = [o.shot_time]
       continue
-    order_map[ticker].append(order.shot_time)
+    order_map[ticker].append(o.shot_time)
 
 def PlotMap(pmap, ax, label):
-    items = pmap[t].items()
+    items = pmap.items()
     items = sorted(items, key=lambda x:x[0])
     ax.plot([i[0] for i in items], [i[1] for i in items], label=label)
+
+def GetTimeList(tl, rtl):
+  k = 0
+  print(tl[:10])
+  for i, t in enumerate(tl):
+    for j in range(k, len(rtl)-1):
+      if rtl[j] > t:
+        tl[i] = rtl[j]
+        k = j
+        break
+  print(tl[:10])
+  #print(rtl)
+  return tl
 
 def SaveSpreadPng(mid_map, mid_time_map, order_map, png_path):
   tickers = mid_time_map.keys()
   ksize = len(tickers)
   ncol, nrow = int(math.sqrt(ksize)), int(math.sqrt(ksize))+1
-  width = int(math.sqrt(ksize)) + 1 
-  height = int(math.sqrt(ksize)) +1
-  fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(10,8))
+  ncol, nrow = 1, ksize
+  #width = int(math.sqrt(ksize)) + 1 
+  #height = int(math.sqrt(ksize)) +1
+  fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(5,16))
   count = 0
   for t in tickers:
     if count % (ncol*nrow) == 0 and count > 0:
       fig.tight_layout()
       fig.savefig('spread_move@%d' %(t, str(count)))
-      fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(10,8))
-    this_ax = ax[int(count/ncol)%nrow, count%ncol]
-    PlotMap(mid_time_map, this_ax, 'mid')
-    PlotMap(up_bound_time_map, this_ax, 'up')
-    PlotMap(down_bound_time_map, this_ax, 'down')
-    PlotMap(mean_time_map, this_ax, 'mean')
-    time_list = order_map[t]
-    this_ax.scatter(time_list, [mid_time_map[t][tl] for tl in time_list], label='order')
+      fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(5,16))
+    if ncol == 1:
+      this_ax = ax[int(count/ncol)%nrow]
+    else:
+      this_ax = ax[int(count/ncol)%nrow, count%ncol]
+    PlotMap(mid_time_map[t], this_ax, 'mid')
+    PlotMap(up_bound_time_map[t], this_ax, 'up')
+    PlotMap(down_bound_time_map[t], this_ax, 'down')
+    PlotMap(mean_time_map[t], this_ax, 'mean')
+    mt = t.split('|')[1]
+    if mt in order_map:
+      time_list = order_map[mt]
+      for tl in time_list:
+        this_ax.axvline(tl, ls='--', c='black')#, linestyles = "dashed")
+      #time_list = GetTimeList(time_list, sorted(mid_time_map[t].keys()))
+      #this_ax.scatter(time_list, [mid_time_map[t][tl] for tl in time_list], label='order', color='black')
     this_ax.set_title('%s\'s spread move' % (t))
     this_ax.grid()
     this_ax.legend()
@@ -140,14 +164,28 @@ if __name__ == '__main__':
   down_bound_time_map = {}
   mean_time_map = {}
   order_map = {}
+  single_map = {}
+
+  bt_mid_map = {}
+  bt_mid_time_map = {}
+  bt_single_time_map = {}
+  bt_up_bound_time_map = {}
+  bt_down_bound_time_map = {}
+  bt_mean_time_map = {}
+  bt_order_map = {}
+  bt_single_map = {}
+
   EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com")
   date_prefix = '/today/'
   date_prefix = '/running/2019-09-11/'
-  LoadShot(date_prefix+'mid.dat', date_prefix+'order.dat', mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map)
+  LoadShot(date_prefix+'mid.dat', date_prefix+'order.dat', mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, single_map)
+  LoadShot(date_prefix+'mid_backtest.dat', date_prefix+'order_backtest.dat', bt_mid_time_map, bt_single_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_single_map)
   strat_keys = mid_time_map.keys()
   png_path = date_prefix+'spread_move.png'
+  bt_png_path = date_prefix+'spread_move_bt.png'
   SaveSpreadPng(mid_map, mid_time_map, order_map, png_path)
+  SaveSpreadPng(bt_mid_map, bt_mid_time_map, bt_order_map, bt_png_path)
   trade_df, strat_df = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled')
   vol_df = GenVolReport(mid_map, single_map)
   bt_df, bt_strat_df = GenBTReport(date_prefix+'order_backtest.dat')
-  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df), png_list=[png_path])
+  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df), png_list=[png_path, bt_png_path])
