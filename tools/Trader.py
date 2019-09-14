@@ -1,5 +1,7 @@
 from caler import *
 import pandas as pd
+from Plotor import *
+from Reader import *
 
 no_today = {'IF', 'IH', 'IC'}
 
@@ -11,6 +13,7 @@ def GetCon(ticker):
 class Trader:
   def __init__(self, enable_fee = False, fee_rate=0.0, record=False):
     self.caler = CALER('/root/hft/config/contract/contract.config')
+    self.pt = Plotor()
     self.pos = {}
     self.avgcost = {}
     self.pnl = {}
@@ -18,6 +21,7 @@ class Trader:
     self.trade_count = {}
     self.fee_rate = fee_rate
     self.record = record
+    self.pnl_hist = {}
     if record == True:
       self.f = open('traders_record.txt', 'w')
 
@@ -35,20 +39,19 @@ class Trader:
       self.pnl[ticker] = 0.0
       self.trade_count[ticker] = 1.0
       self.fee[ticker] = 0.0
+      self.pnl_hist[ticker] = []
       return
     if self.pos[ticker] * size < 0:  # close position
       if abs(size) > self.pos[ticker]:  # over close
-        #self.pnl[ticker] += (self.avgcost[ticker] - price) * -self.pos[ticker] * self.caler.GetConSize(ticker)
-        #self.pnl[ticker] -= self.caler.Cal
         c = self.caler.CalFee(ticker, self.avgcost[ticker], abs(self.pos[ticker]), price, abs(self.pos[ticker]), GetCon(ticker) in no_today)
         self.fee[ticker] += c.open_fee + c.close_fee
         self.pnl[ticker] += self.caler.CalNetPnl(ticker, self.avgcost[ticker], abs(self.pos[ticker]), price, abs(self.pos[ticker]), OrderSide.Buy if size > 0 else OrderSide.Sell, GetCon(ticker) in no_today)
         self.avgcost[ticker] = price
       else: # normal close
-        #self.pnl[ticker] += (self.avgcost[ticker] - price) * size
         c = self.caler.CalFee(ticker, self.avgcost[ticker], abs(size), price, abs(size), GetCon(ticker) in no_today)
         self.fee[ticker] += c.open_fee + c.close_fee
         self.pnl[ticker] += self.caler.CalNetPnl(ticker, self.avgcost[ticker], abs(size), price, abs(size), OrderSide.Buy if size > 0 else OrderSide.Sell, GetCon(ticker) in no_today)
+      self.pnl_hist[ticker].append(self.pnl[ticker])
     else:  # open position
       self.avgcost[ticker] += (price-self.avgcost[ticker])*size/(self.pos[ticker]+size)
     self.pos[ticker] += size
@@ -58,6 +61,18 @@ class Trader:
     trade_record = "Trade %s %d@%f" %(ticker, size, price)
     if self.record:
       self.f.write(trade_record+'\n')
+
+  def PlotStratPnl(self):
+    self.strat_pnl_hist = {}
+    for t in self.pnl_hist:
+      con = GetCon(t)
+      if con not in self.strat_pnl_hist:
+        self.strat_pnl_hist[con] = self.pnl_hist[t]
+        continue
+      for i, c in enumerate(self.strat_pnl_hist[con]):
+        self.strat_pnl_hist[con][i] += self.pnl_hist[t][i]
+    print(self.strat_pnl_hist)
+    self.pt.PlotMultiMap(self.strat_pnl_hist, 'strat_pnl_hist')
 
   def Summary(self):
     print('================================================================================================================')
@@ -102,3 +117,15 @@ class Trader:
           self.strat_pnl[k][c] = round(self.strat_pnl[k][c], 1)
     rdf = pd.DataFrame(self.strat_pnl).T
     return rdf[['trade_count', 'net_pnl', 'left_position', 'avgcost', 'fee']]
+
+if __name__=='__main__':
+  t = Trader()
+  r = Reader()
+  r.load_order_file('/today/order_backtest.dat')
+  s = r.get_ordersize()
+  for i in range(s):
+    o = r.read_border(i)
+    if o.price > 0:
+      t.RegisterOneTrade(o.contract, o.size if o.side == 1 else -o.size, o.price)
+  t.Summary()
+  t.PlotStratPnl()

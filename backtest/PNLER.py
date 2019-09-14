@@ -11,7 +11,7 @@ from common.order import *
 from common.market_snapshot import *
 import math
 
-contract_config_path = "/root/hft/config/backtest/contract.config"
+contract_config_path = "/root/hft/config/contract/contract.config"
 
 class BackTester:
   def __init__(self):

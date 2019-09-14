@@ -71,15 +71,13 @@ def SaveSpreadPng(mid_map, mid_time_map, order_map, png_path):
   ksize = len(tickers)
   ncol, nrow = int(math.sqrt(ksize)), int(math.sqrt(ksize))+1
   ncol, nrow = 1, ksize
-  #width = int(math.sqrt(ksize)) + 1 
-  #height = int(math.sqrt(ksize)) +1
-  fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(5,16))
+  fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(5*ncol,int(16/ncol)))
   count = 0
   for t in tickers:
     if count % (ncol*nrow) == 0 and count > 0:
       fig.tight_layout()
-      fig.savefig('spread_move@%d' %(t, str(count)))
-      fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(5,16))
+      fig.savefig(png_path.split('.')[0]+str(count)+'.png')
+      fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(5*ncol,int(16/ncol)))
     if ncol == 1:
       this_ax = ax[int(count/ncol)%nrow]
     else:
@@ -177,7 +175,7 @@ if __name__ == '__main__':
 
   EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com")
   date_prefix = '/today/'
-  #date_prefix = '/running/2019-09-11/'
+  date_prefix = '/running/2019-09-11/'
   LoadShot(date_prefix+'mid.dat', date_prefix+'order.dat', mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, single_map)
   LoadShot(date_prefix+'mid_backtest.dat', date_prefix+'order_backtest.dat', bt_mid_time_map, bt_single_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_single_map)
   strat_keys = mid_time_map.keys()
