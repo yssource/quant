@@ -10,9 +10,10 @@ from exchangeinfo import *
 from Trader import *
 import datetime
 
-def LoadShot(mid_file, mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map):
+def LoadShot(mid_file, order_file, mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map):
   r = Reader()
   r.load_shot_file(mid_file)
+  r.load_order_file(order_file)
   for i in range(r.get_shotsize()):
     shot = r.read_bshot(i)
     ticker = shot.ticker
@@ -24,21 +25,33 @@ def LoadShot(mid_file, mid_map, mid_time_map, single_map, up_bound_map, down_bou
     mean = (mean_up+mean_down)/2
     time = shot.time
     if ticker not in mid_map:
-      mid_map[ticker] = [mid]
+      #mid_map[ticker] = [mid]
       mid_time_map[ticker] = {time:mid}
-      single_map[ticker] = [(shot.bids[3], shot.asks[3])]
-      up_bound_map[ticker] = [up]
-      down_bound_map[ticker] = [down]
-      mean_map[ticker] = [mean]
+      single_map[ticker] = {time:[(shot.bids[3], shot.asks[3])]}
+      up_bound_map[ticker] = {time:up}
+      down_bound_map[ticker] = {time:down}
+      mean_map[ticker] = {time:mean}
       continue
-    up_bound_map[ticker].append(up)
-    down_bound_map[ticker].append(down)
-    mean_map[ticker].append(mean)
-    mid_map[ticker].append(mid)
+    up_bound_time_map[ticker] = up
+    down_bound_time_map[ticker] = down
+    mean_time_map[ticker] = mean
+    #mid_map[ticker].append(mid)
     mid_time_map[ticker][time] = mid
-    single_map[ticker].append((shot.bids[3], shot.asks[3]))
+    single_time_map[ticker] = (shot.bids[3], shot.asks[3])
+  for i in range(r.get_ordersize()):
+    o = r.read_border(i)
+    ticker = o.contract
+    if ticker not in order_map:
+      order_map[ticker] = [order.shot_time]
+      continue
+    order_map[ticker].append(order.shot_time)
 
-def SaveSpreadPng(mid_map, mid_time_map, png_path):
+def PlotMap(pmap, ax, label):
+    items = pmap[t].items()
+    items = sorted(items, key=lambda x:x[0])
+    ax.plot([i[0] for i in items], [i[1] for i in items], label=label)
+
+def SaveSpreadPng(mid_map, mid_time_map, order_map, png_path):
   tickers = mid_time_map.keys()
   ksize = len(tickers)
   ncol, nrow = int(math.sqrt(ksize)), int(math.sqrt(ksize))+1
@@ -52,13 +65,12 @@ def SaveSpreadPng(mid_map, mid_time_map, png_path):
       fig.savefig('spread_move@%d' %(t, str(count)))
       fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(10,8))
     this_ax = ax[int(count/ncol)%nrow, count%ncol]
-    items = mid_time_map[t].items()
-    items = sorted(items, key=lambda x:x[0])
-    #plt.plot([i[0] for i in items], [i[1] for i in items])
-    this_ax.plot(mid_map[t], label='mid')
-    this_ax.plot(up_bound_map[t], label='up')
-    this_ax.plot(down_bound_map[t], label='down')
-    this_ax.plot(mean_map[t], label='mean')
+    PlotMap(mid_time_map, this_ax, 'mid')
+    PlotMap(up_bound_time_map, this_ax, 'up')
+    PlotMap(down_bound_time_map, this_ax, 'down')
+    PlotMap(mean_time_map, this_ax, 'mean')
+    time_list = order_map[t]
+    this_ax.scatter(time_list, [mid_time_map[t][tl] for tl in time_list], label='order')
     this_ax.set_title('%s\'s spread move' % (t))
     this_ax.grid()
     this_ax.legend()
@@ -123,17 +135,18 @@ def GenBTReport(bt_file_path):
 if __name__ == '__main__':
   mid_map = {}
   mid_time_map = {}
-  single_map = {}
-  up_bound_map = {}
-  down_bound_map = {}
-  mean_map = {}
+  single_time_map = {}
+  up_bound_time_map = {}
+  down_bound_time_map = {}
+  mean_time_map = {}
+  order_map = {}
   EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com")
   date_prefix = '/today/'
-  #date_prefix = '/running/2019-09-11/'
-  LoadShot(date_prefix+'mid.dat', mid_map, mid_time_map, single_map, up_bound_map, down_bound_map, mean_map)
-  strat_keys = mid_map.keys()
+  date_prefix = '/running/2019-09-11/'
+  LoadShot(date_prefix+'mid.dat', date_prefix+'order.dat', mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map)
+  strat_keys = mid_time_map.keys()
   png_path = date_prefix+'spread_move.png'
-  SaveSpreadPng(mid_map, mid_time_map, png_path)
+  SaveSpreadPng(mid_map, mid_time_map, order_map, png_path)
   trade_df, strat_df = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled')
   vol_df = GenVolReport(mid_map, single_map)
   bt_df, bt_strat_df = GenBTReport(date_prefix+'order_backtest.dat')
