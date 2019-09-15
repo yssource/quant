@@ -175,7 +175,7 @@ if __name__ == '__main__':
 
   EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com")
   date_prefix = '/today/'
-  date_prefix = '/running/2019-09-11/'
+  #date_prefix = '/running/2019-09-11/'
   LoadShot(date_prefix+'mid.dat', date_prefix+'order.dat', mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, single_map)
   LoadShot(date_prefix+'mid_backtest.dat', date_prefix+'order_backtest.dat', bt_mid_time_map, bt_single_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_single_map)
   strat_keys = mid_time_map.keys()
