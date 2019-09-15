@@ -66,12 +66,19 @@ class Trader:
     self.strat_pnl_hist = {}
     for t in self.pnl_hist:
       con = GetCon(t)
+      if con == None:
+        continue
       if con not in self.strat_pnl_hist:
         self.strat_pnl_hist[con] = self.pnl_hist[t]
         continue
       for i, c in enumerate(self.strat_pnl_hist[con]):
+        #print(self.strat_pnl_hist[con])
+        #print(self.pnl_hist[t])
+        #print(len(self.strat_pnl_hist[con]))
+        #print(len(self.pnl_hist[t]))
+        #print(t)
         self.strat_pnl_hist[con][i] += self.pnl_hist[t][i]
-    print(self.strat_pnl_hist)
+    #print(self.strat_pnl_hist)
     self.pt.PlotMultiMap(self.strat_pnl_hist, 'strat_pnl_hist')
 
   def Summary(self):
@@ -123,9 +130,13 @@ if __name__=='__main__':
   r = Reader()
   r.load_order_file('/today/order_backtest.dat')
   s = r.get_ordersize()
+  count = 0
   for i in range(s):
     o = r.read_border(i)
-    if o.price > 0:
+    if o.price > 0 and o.size > 0:
+      o.Show()
+      o.contract = GetCon(o.contract) + ('8888' if count%2 == 0 else '9999')
       t.RegisterOneTrade(o.contract, o.size if o.side == 1 else -o.size, o.price)
+      count += 1
   t.Summary()
   t.PlotStratPnl()

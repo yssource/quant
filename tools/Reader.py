@@ -141,3 +141,10 @@ class Reader:
       df.loc[[i for i in range(len(df)-500, len(df))], 'label'] = self.label_map['Flat']
     #print('after labelling: %.1f%% are buy, %.1f%% are sell, %.1f%% are flat' %((df['label']==self.label_map['Buy']).mean()*100, (df['label']==self.label_map['Sell']).mean()*100, (df['label']==self.label_map['Flat']).mean()*100))
     return df
+
+if __name__=='__main__':
+  r=Reader()
+  r.load_order_file('/today/order_backtest.dat')
+  for i in range(r.get_ordersize()):
+    o = r.read_border(i)
+    o.Show()

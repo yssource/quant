@@ -24,7 +24,7 @@ class Plotor:
     for t in tickers:
       if count % (ncol*nrow) == 0 and count > 0:
         fig.tight_layout()
-        fig.savefig('%s%s@%d' %(path, label, str(count)))
+        fig.savefig('%s%s@%d' %(path, label, count))
         fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(self.one_width*ncol,int(self.graph_area/(ncol*self.one_width))))
       if ncol == 1:
         this_ax = ax[int(count/ncol)%nrow]
