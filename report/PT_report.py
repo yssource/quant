@@ -9,12 +9,14 @@ import subprocess
 from exchangeinfo import *
 from Trader import *
 import datetime
+import sys
 
-def LoadShot(mid_file, order_file, mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, single_map):
+def LoadShot(mid_file, order_file, mm, mtm, stm, ubtm, dbtm, mntm, om, sm):
   r = Reader()
   r.load_shot_file(mid_file)
   r.load_order_file(order_file)
   for i in range(r.get_shotsize()):
+    shot = MarketSnapshot(price_check = False)
     shot = r.read_bshot(i)
     ticker = shot.ticker
     mid = shot.last_trade
@@ -24,29 +26,29 @@ def LoadShot(mid_file, order_file, mid_time_map, single_time_map, up_bound_time_
     mean_down = shot.bids[2]
     mean = (mean_up+mean_down)/2
     time = shot.time
-    if ticker not in mid_time_map:
-      mid_map[ticker] = [mid]
-      single_map[ticker] = [(shot.bids[3], shot.asks[3])]
-      mid_time_map[ticker] = {time:mid}
-      single_time_map[ticker] = {time:[(shot.bids[3], shot.asks[3])]}
-      up_bound_time_map[ticker] = {time:up}
-      down_bound_time_map[ticker] = {time:down}
-      mean_time_map[ticker] = {time:mean}
+    if ticker not in mtm:
+      mm[ticker] = [mid]
+      sm[ticker] = [(shot.bids[3], shot.asks[3])]
+      mtm[ticker] = {time:mid}
+      stm[ticker] = {time:[(shot.bids[3], shot.asks[3])]}
+      ubtm[ticker] = {time:up}
+      dbtm[ticker] = {time:down}
+      mntm[ticker] = {time:mean}
       continue
-    up_bound_time_map[ticker][time] = up
-    down_bound_time_map[ticker][time] = down
-    mean_time_map[ticker][time] = mean
-    mid_map[ticker].append(mid)
-    single_map[ticker].append((shot.bids[3], shot.asks[3]))
-    mid_time_map[ticker][time] = mid
-    single_time_map[ticker][time] = (shot.bids[3], shot.asks[3])
+    ubtm[ticker][time] = up
+    dbtm[ticker][time] = down
+    mntm[ticker][time] = mean
+    mm[ticker].append(mid)
+    sm[ticker].append((shot.bids[3], shot.asks[3]))
+    mtm[ticker][time] = mid
+    stm[ticker][time] = (shot.bids[3], shot.asks[3])
   for i in range(r.get_ordersize()):
     o = r.read_border(i)
     ticker = o.contract
-    if ticker not in order_map:
-      order_map[ticker] = [o.shot_time]
+    if ticker not in om:
+      om[ticker] = [o.shot_time]
       continue
-    order_map[ticker].append(o.shot_time)
+    om[ticker].append(o.shot_time)
 
 def PlotMap(pmap, ax, label):
     items = pmap.items()
@@ -66,7 +68,7 @@ def GetTimeList(tl, rtl):
   #print(rtl)
   return tl
 
-def SaveSpreadPng(mid_map, mid_time_map, order_map, png_path):
+def SaveSpreadPng(mid_map, mid_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, png_path):
   tickers = mid_time_map.keys()
   ksize = len(tickers)
   ncol, nrow = int(math.sqrt(ksize)), int(math.sqrt(ksize))+1
@@ -173,16 +175,16 @@ if __name__ == '__main__':
   bt_order_map = {}
   bt_single_map = {}
 
-  EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com")
+  EM = EmailWorker(recv_mail="huangxy17@fudan.edu.cn;839507834@qq.com;jiansun@fudan.edu.cn")
   date_prefix = '/today/'
   #date_prefix = '/running/2019-09-11/'
-  LoadShot(date_prefix+'mid.dat', date_prefix+'order.dat', mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, single_map)
-  LoadShot(date_prefix+'mid_backtest.dat', date_prefix+'order_backtest.dat', bt_mid_time_map, bt_single_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_single_map)
+  LoadShot(date_prefix+'mid.dat', date_prefix+'order.dat', mid_map, mid_time_map, single_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, single_map)
+  LoadShot(date_prefix+'mid_backtest.dat', date_prefix+'order_backtest.dat', bt_mid_map, bt_mid_time_map, bt_single_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_single_map)
   strat_keys = mid_time_map.keys()
   png_path = date_prefix+'spread_move.png'
   bt_png_path = date_prefix+'spread_move_bt.png'
-  SaveSpreadPng(mid_map, mid_time_map, order_map, png_path)
-  SaveSpreadPng(bt_mid_map, bt_mid_time_map, bt_order_map, bt_png_path)
+  SaveSpreadPng(mid_map, mid_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, png_path)
+  SaveSpreadPng(bt_mid_map, bt_mid_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_png_path)
   trade_df, strat_df = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled')
   vol_df = GenVolReport(mid_map, single_map)
   bt_df, bt_strat_df = GenBTReport(date_prefix+'order_backtest.dat')

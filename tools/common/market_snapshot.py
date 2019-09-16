@@ -1,7 +1,7 @@
 import time
 
 class MarketSnapshot:
-  def __init__(self, time_check = False, depth = 5):
+  def __init__(self, time_check = False, price_check = True, depth = 5):
     self.ticker = ""
     self.bids = [-1.0] * depth
     self.asks = [-1.0] * depth
@@ -17,6 +17,7 @@ class MarketSnapshot:
     self.depth = depth
     self.time_str = ''
     self.time_check = time_check
+    self.price_check = price_check
 
   def Filter(self):
     self.ticker = self.ticker.split('\0')[0]
@@ -103,8 +104,9 @@ class MarketSnapshot:
     return self.Check()
 
   def Check(self):
-    if self.bid_sizes[0] < 0.1 or self.ask_sizes[0] < 0.1 or self.last_trade < 0.1 or self.bids[0] < 0.1 or self.asks[0] < 0.1 or len(self.ticker) > 10:
-      return False
+    if self.price_check:
+      if self.bid_sizes[0] < 0.1 or self.ask_sizes[0] < 0.1 or self.last_trade < 0.1 or self.bids[0] < 0.1 or self.asks[0] < 0.1 or len(self.ticker) > 10:
+        return False
     if self.ticker == 'ticker':
       return False
     if self.ticker == 'CODE':
