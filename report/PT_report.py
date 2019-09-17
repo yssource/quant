@@ -115,7 +115,7 @@ def TradeReport(date_prefix, trade_path, cancel_path):
     for l in f:
       temp = []
       ei.construct(l)
-      temp.append(ei.time_str)
+      temp.append(datetime.datetime.fromtimestamp(float(ei.time_str)).strftime("%Y-%m-%d %H:%M:%S"))
       temp.append(ei.contract)
       temp.append("Buy" if ei.side == 0 else "Sell")
       temp.append(ei.trade_price)
