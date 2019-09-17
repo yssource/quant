@@ -108,12 +108,22 @@ def TradeReport(date_prefix, trade_path, cancel_path):
   command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
   command = 'cat '+date_prefix+'log/order.log | grep Cancelled > '+ cancel_path +'; cat '+date_prefix+'log/order_night.log | grep Cancelled >> '+ cancel_path
   command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
+  time.sleep(3)
+  trade_details = []
   with open(trade_path) as f:
     ei = ExchangeInfo()
     for l in f:
+      temp = []
       ei.construct(l)
+      temp.append(ei.time_str)
+      temp.append(ei.contract)
+      temp.append("Buy" if ei.side == 0 else "Sell")
+      temp.append(ei.trade_price)
+      temp.append(ei.trade_size)
+      trade_details.append(temp)
       trader.RegisterOneTrade(ei.contract, int(ei.trade_size) if ei.side == 0 else -int(ei.trade_size), float(ei.trade_price))
   df = trader.GenDFReport()
+  #print(df)
   #trader.Summary()
   df.insert(len(df.columns), 'cancelled', 0)
   with open(cancel_path) as f:
@@ -121,7 +131,7 @@ def TradeReport(date_prefix, trade_path, cancel_path):
     for l in f:
       ei.construct(l)
       df.loc[ei.contract, 'cancelled'] = df.loc[ei.contract, 'cancelled'] + 1
-  return df, trader.GenStratReport()
+  return df, trader.GenStratReport(), pd.DataFrame(trade_details, columns=['time', 'ticker', 'Side', 'price', 'size'])
 
 def GenVolReport(mid_map, single_map):
   caler = CALER('/root/hft/config/contract/contract.config')
@@ -185,7 +195,7 @@ if __name__ == '__main__':
   bt_png_path = date_prefix+'spread_move_bt.png'
   SaveSpreadPng(mid_map, mid_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, png_path)
   SaveSpreadPng(bt_mid_map, bt_mid_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_png_path)
-  trade_df, strat_df = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled')
+  trade_df, strat_df, trade_details = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled')
   vol_df = GenVolReport(mid_map, single_map)
   bt_df, bt_strat_df = GenBTReport(date_prefix+'order_backtest.dat')
-  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df), png_list=[png_path, bt_png_path])
+  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df, trade_details=trade_details), png_list=[png_path, bt_png_path])

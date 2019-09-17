@@ -151,5 +151,27 @@
           {% endfor %}
         </tbody>
       </table>
+      <h3>Trade Details</h3>
+      <table cellspacing="0" border="1px solid black">
+        <thead>
+          <tr>
+              <th>index</th>
+              {% for c in trade_details.columns %}
+                <th>{{c}}</th>
+              {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for id in trade_details.index %}
+            <tr>
+            <th>{{id}}</th>
+              {% for c in trade_details.columns %}
+                <td>{{trade_details[c][id]}}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
 </body>
 </html>
