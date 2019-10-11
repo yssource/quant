@@ -1,3 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
+export LD_LIBRARY_PATH=/usr/local/lib
 
-python /root/quant/report/PT_report.py
+/root/anaconda2/bin/python /root/quant/report/PT_report.py > /root/pt_report.log

@@ -122,6 +122,7 @@ def TradeReport(date_prefix, trade_path, cancel_path):
       temp.append(ei.trade_size)
       trade_details.append(temp)
       trader.RegisterOneTrade(ei.contract, int(ei.trade_size) if ei.side == 0 else -int(ei.trade_size), float(ei.trade_price))
+  #print('printint')
   df = trader.GenDFReport()
   #print(df)
   #trader.Summary()
@@ -130,6 +131,8 @@ def TradeReport(date_prefix, trade_path, cancel_path):
     ei = ExchangeInfo()
     for l in f:
       ei.construct(l)
+      if ei.contract not in df.index:
+        df.loc[ei.contract] = 0
       df.loc[ei.contract, 'cancelled'] = df.loc[ei.contract, 'cancelled'] + 1
   return df, trader.GenStratReport(), pd.DataFrame(trade_details, columns=['time', 'ticker', 'Side', 'price', 'size'])
 
