@@ -102,7 +102,7 @@ def SaveSpreadPng(mid_map, mid_time_map, up_bound_time_map, down_bound_time_map,
   plt.tight_layout()
   plt.savefig(png_path)
 
-def TradeReport(date_prefix, trade_path, cancel_path):
+def TradeReport(date_prefix, trade_path, cancel_path, file_name=''):
   trader = Trader()
   command = 'cat '+date_prefix+'log/order.log | grep Filled > ' +  trade_path +'; cat '+ date_prefix + 'log/order_night.log | grep Filled >> ' + trade_path
   command_result = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -124,6 +124,7 @@ def TradeReport(date_prefix, trade_path, cancel_path):
       trader.RegisterOneTrade(ei.ticker, int(ei.trade_size) if ei.side == 0 else -int(ei.trade_size), float(ei.trade_price))
   #print('printint')
   df = trader.GenDFReport()
+  trader.PlotStratPnl(file_name=file_name)
   #print(df)
   #trader.Summary()
   df.insert(len(df.columns), 'cancelled', 0)
@@ -167,6 +168,7 @@ def GenBTReport(bt_file_path, file_name='strat_pnl_hist'):
     o = r.read_border(i)
     if o.price > 0 and abs(o.size) > 0:
       t.RegisterOneTrade(o.ticker, o.size if o.side==1 else -o.size, o.price)
+  t.PlotStratPnl(file_name)
   return t.GenDFReport(), t.GenStratReport()
 
 if __name__ == '__main__':
@@ -198,10 +200,11 @@ if __name__ == '__main__':
   bt_png_path = date_prefix+'spread_move_bt.png'
   SaveSpreadPng(mid_map, mid_time_map, up_bound_time_map, down_bound_time_map, mean_time_map, order_map, png_path)
   SaveSpreadPng(bt_mid_map, bt_mid_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_png_path)
-  trade_df, strat_df, trade_details = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled')
-  vol_df = GenVolReport(mid_map, single_map)
   bt_pnl = 'backtest_pnl_curve'
   real_pnl = 'real_pnl_curve'
+  trade_df, strat_df, trade_details = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled', file_name=real_pnl)
+  vol_df = GenVolReport(mid_map, single_map)
   bt_df, bt_strat_df = GenBTReport(date_prefix+'order_backtest.dat', file_name=bt_pnl)
-  real_df, real_strat_df = GenBTReport(date_prefix+'order.dat', file_name=real_pnl)
-  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df, trade_details=trade_details), png_list=[png_path, bt_png_path, date_prefix+real_pnl+',png', date_prefix+bt_pnl+'.png'])
+  print(bt_strat_df)
+  #real_df, real_strat_df = GenBTReport(date_prefix+'order.dat', file_name=real_pnl)
+  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df, trade_details=trade_details), png_list=[png_path, bt_png_path, real_pnl+'@%d.png'%(len(strat_df)), bt_pnl+'@%d.png'%(len(bt_strat_df))])
