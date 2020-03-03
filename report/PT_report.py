@@ -44,7 +44,7 @@ def LoadShot(mid_file, order_file, mm, mtm, stm, ubtm, dbtm, mntm, om, sm):
     stm[ticker][time] = (shot.bids[3], shot.asks[3])
   for i in range(r.get_ordersize()):
     o = r.read_border(i)
-    ticker = o.contract
+    ticker = o.ticker
     if ticker not in om:
       om[ticker] = [o.shot_time]
       continue
@@ -116,12 +116,12 @@ def TradeReport(date_prefix, trade_path, cancel_path):
       temp = []
       ei.construct(l)
       temp.append(datetime.datetime.fromtimestamp(float(ei.time_str)).strftime("%Y-%m-%d %H:%M:%S"))
-      temp.append(ei.contract)
+      temp.append(ei.ticker)
       temp.append("Buy" if ei.side == 0 else "Sell")
       temp.append(ei.trade_price)
       temp.append(ei.trade_size)
       trade_details.append(temp)
-      trader.RegisterOneTrade(ei.contract, int(ei.trade_size) if ei.side == 0 else -int(ei.trade_size), float(ei.trade_price))
+      trader.RegisterOneTrade(ei.ticker, int(ei.trade_size) if ei.side == 0 else -int(ei.trade_size), float(ei.trade_price))
   #print('printint')
   df = trader.GenDFReport()
   #print(df)
@@ -131,13 +131,13 @@ def TradeReport(date_prefix, trade_path, cancel_path):
     ei = ExchangeInfo()
     for l in f:
       ei.construct(l)
-      if ei.contract not in df.index:
-        df.loc[ei.contract] = 0
-      df.loc[ei.contract, 'cancelled'] = df.loc[ei.contract, 'cancelled'] + 1
+      if ei.ticker not in df.index:
+        df.loc[ei.ticker] = 0
+      df.loc[ei.ticker, 'cancelled'] = df.loc[ei.ticker, 'cancelled'] + 1
   return df, trader.GenStratReport(), pd.DataFrame(trade_details, columns=['time', 'ticker', 'Side', 'price', 'size'])
 
 def GenVolReport(mid_map, single_map):
-  caler = CALER('/root/hft/config/contract/contract.config')
+  caler = CALER('/root/hft/config/contract/bk_contract.config')
   v = {}
   i_rate = 0.2
   col = [str((i+1)*i_rate*100)+'%' for i in range(int(1/i_rate))]
@@ -166,7 +166,7 @@ def GenBTReport(bt_file_path):
   for i in range(r.get_ordersize()):
     o = r.read_border(i)
     if o.price > 0 and abs(o.size) > 0:
-      t.RegisterOneTrade(o.contract, o.size if o.side==1 else -o.size, o.price)
+      t.RegisterOneTrade(o.ticker, o.size if o.side==1 else -o.size, o.price)
   return t.GenDFReport(), t.GenStratReport()
 
 if __name__ == '__main__':

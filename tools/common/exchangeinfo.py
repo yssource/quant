@@ -1,7 +1,7 @@
 class ExchangeInfo:
   def __init__(self):
     self.type = -1;
-    self.contract = 'c';
+    self.ticker = 'c';
     self.order_ref = 'or';
     self.trade_size = -1;
     self.trade_price = -1.0;
@@ -27,7 +27,7 @@ class ExchangeInfo:
     self.trade_price = ps[0]
     self.trade_size = ps[1]
     self.type = self.type_int[c[6]]
-    self.contract = c[7]
+    self.ticker = c[7]
     self.side = self.side_int[c[8]]
     return True
 
@@ -43,7 +43,7 @@ class ExchangeInfo:
     show_str += '|' + split_c
     show_str += self.trade_price + '@'+self.trade_size + split_c
     show_str += self.int_type[self.type] + split_c
-    show_str += self.contract+split_c
+    show_str += self.ticker+split_c
     show_str += self.int_side[self.side]
     print(show_str)
     return show_str
