@@ -4,7 +4,7 @@ class Order:
   def __init__(self):
     self.shot_time=-1.0;
     self.send_time=-1.0;
-    self.contract=''
+    self.ticker=''
     self.price=-1.0
     self.size=1
     self.traded_size=1
@@ -21,7 +21,7 @@ class Order:
 
   def Filter(self):
     self.tbd = self.tbd.split('\0')[0]
-    self.contract = self.contract.split('\0')[0]
+    self.ticker = self.ticker.split('\0')[0]
     self.order_ref = self.order_ref.split('\0')[0]
     return self
 
@@ -36,7 +36,7 @@ class Order:
       self.shot_time = shot_time_sec+round(shot_time_usec,2)
       self.send_time = send_time_sec+round(send_time_usec,2)
       topic=content[4]
-      self.contract=content[5]
+      self.ticker=content[5]
       split_char=content[6]
       trade_info=content[7]
       ti = trade_info.split('@')
@@ -61,7 +61,7 @@ class Order:
     show_str += split_c   
     show_str += str(self.send_time)
     show_str += split_c   
-    show_str += str(self.contract)
+    show_str += str(self.ticker)
     show_str += split_c   
     show_str += str(self.price)
     show_str += '@'

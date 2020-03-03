@@ -44,7 +44,7 @@ def LoadShot(mid_file, order_file, mm, mtm, stm, ubtm, dbtm, mntm, om, sm):
     stm[ticker][time] = (shot.bids[3], shot.asks[3])
   for i in range(r.get_ordersize()):
     o = r.read_border(i)
-    ticker = o.contract
+    ticker = o.ticker
     if ticker not in om:
       om[ticker] = [o.shot_time]
       continue
@@ -116,12 +116,12 @@ def TradeReport(date_prefix, trade_path, cancel_path):
       temp = []
       ei.construct(l)
       temp.append(datetime.datetime.fromtimestamp(float(ei.time_str)).strftime("%Y-%m-%d %H:%M:%S"))
-      temp.append(ei.contract)
+      temp.append(ei.ticker)
       temp.append("Buy" if ei.side == 0 else "Sell")
       temp.append(ei.trade_price)
       temp.append(ei.trade_size)
       trade_details.append(temp)
-      trader.RegisterOneTrade(ei.contract, int(ei.trade_size) if ei.side == 0 else -int(ei.trade_size), float(ei.trade_price))
+      trader.RegisterOneTrade(ei.ticker, int(ei.trade_size) if ei.side == 0 else -int(ei.trade_size), float(ei.trade_price))
   #print('printint')
   df = trader.GenDFReport()
   #print(df)
@@ -131,9 +131,9 @@ def TradeReport(date_prefix, trade_path, cancel_path):
     ei = ExchangeInfo()
     for l in f:
       ei.construct(l)
-      if ei.contract not in df.index:
-        df.loc[ei.contract] = 0
-      df.loc[ei.contract, 'cancelled'] = df.loc[ei.contract, 'cancelled'] + 1
+      if ei.ticker not in df.index:
+        df.loc[ei.ticker] = 0
+      df.loc[ei.ticker, 'cancelled'] = df.loc[ei.ticker, 'cancelled'] + 1
   return df, trader.GenStratReport(), pd.DataFrame(trade_details, columns=['time', 'ticker', 'Side', 'price', 'size'])
 
 def GenVolReport(mid_map, single_map):
@@ -159,14 +159,15 @@ def GenVolReport(mid_map, single_map):
         rdf[k][c] = round(rdf[k][c], 1)
   return rdf
 
-def GenBTReport(bt_file_path):
+def GenBTReport(bt_file_path, file_name='strat_pnl_hist'):
   r = Reader()
   t = Trader()
   r.load_order_file(bt_file_path)
   for i in range(r.get_ordersize()):
     o = r.read_border(i)
     if o.price > 0 and abs(o.size) > 0:
-      t.RegisterOneTrade(o.contract, o.size if o.side==1 else -o.size, o.price)
+      t.RegisterOneTrade(o.ticker, o.size if o.side==1 else -o.size, o.price)
+  t.PlotStratPnl(file_name)
   return t.GenDFReport(), t.GenStratReport()
 
 if __name__ == '__main__':
@@ -200,5 +201,8 @@ if __name__ == '__main__':
   SaveSpreadPng(bt_mid_map, bt_mid_time_map, bt_up_bound_time_map, bt_down_bound_time_map, bt_mean_time_map, bt_order_map, bt_png_path)
   trade_df, strat_df, trade_details = TradeReport(date_prefix, date_prefix+'filled', date_prefix+'cancelled')
   vol_df = GenVolReport(mid_map, single_map)
-  bt_df, bt_strat_df = GenBTReport(date_prefix+'order_backtest.dat')
-  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df, trade_details=trade_details), png_list=[png_path, bt_png_path])
+  bt_pnl = 'backtest_pnl_curve'
+  real_pnl = 'real_pnl_curve'
+  bt_df, bt_strat_df = GenBTReport(date_prefix+'order_backtest.dat', file_name=bt_pnl)
+  real_df, real_strat_df = GenBTReport(date_prefix+'order.dat', file_name=real_pnl)
+  EM.SendHtml(subject='PT_Report on %s'%(datetime.date.today().strftime("%d/%m/%Y")), content = render_template('PT_report.html', trade_df=trade_df, strat_df=strat_df, vol_df=vol_df, bt_df=bt_df, bt_strat_df=bt_strat_df, trade_details=trade_details), png_list=[png_path, bt_png_path, date_prefix+real_pnl+',png', date_prefix+bt_pnl+'.png'])
