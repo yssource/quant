@@ -144,7 +144,7 @@ class Reader:
 
 if __name__=='__main__':
   r=Reader()
-  r.load_order_file('/today/order_backtest.dat')
+  r.load_order_file('/root/hft/build/bin/order.dat')
   for i in range(r.get_ordersize()):
     o = r.read_border(i)
     o.Show()

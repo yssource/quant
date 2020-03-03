@@ -137,7 +137,7 @@ def TradeReport(date_prefix, trade_path, cancel_path):
   return df, trader.GenStratReport(), pd.DataFrame(trade_details, columns=['time', 'ticker', 'Side', 'price', 'size'])
 
 def GenVolReport(mid_map, single_map):
-  caler = CALER('/root/hft/config/contract/contract.config')
+  caler = CALER('/root/hft/config/contract/bk_contract.config')
   v = {}
   i_rate = 0.2
   col = [str((i+1)*i_rate*100)+'%' for i in range(int(1/i_rate))]
