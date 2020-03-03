@@ -167,7 +167,6 @@ def GenBTReport(bt_file_path, file_name='strat_pnl_hist'):
     o = r.read_border(i)
     if o.price > 0 and abs(o.size) > 0:
       t.RegisterOneTrade(o.ticker, o.size if o.side==1 else -o.size, o.price)
-  t.PlotStratPnl(file_name)
   return t.GenDFReport(), t.GenStratReport()
 
 if __name__ == '__main__':

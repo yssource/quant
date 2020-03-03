@@ -71,7 +71,7 @@ class Order:
     show_str += split_c
     show_str += "BUY" if self.side == 1 else "SELL"
     show_str += split_c
-    show_str += str(self.action)
+    show_str += str(self.action_map[self.action])
     show_str += split_c   
     show_str += self.order_ref
     show_str += split_c   

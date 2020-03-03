@@ -77,7 +77,7 @@ class Reader:
     order = Order()
     #print(struct.unpack(self.order_fmt, content))
     shot_sec, shot_usec, send_sec, send_usec = 0,0,0,0
-    shot_sec, shot_usec, send_sec, send_usec, order.contract, order.price,order.size, order.traded_size, order.side, order.order_ref, order.action, order.status, order.offset, order.tbd = struct.unpack(self.order_fmt, content)
+    shot_sec, shot_usec, send_sec, send_usec, order.ticker, order.price,order.size, order.traded_size, order.side, order.order_ref, order.action, order.status, order.offset, order.tbd = struct.unpack(self.order_fmt, content)
     order.shot_time = int(shot_sec) + float("0."+str(shot_usec))
     order.send_time = int(send_sec) + float("0."+str(send_usec))
     return order.Filter()
