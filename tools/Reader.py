@@ -11,9 +11,11 @@ class Reader:
     self.shot_fmt =  "32s5d5d5i5id2i2d1?2Q?7s"
     self.strat_fmt = "32s5d5d5i5id2i2d1?2Q?7s"
     self.order_fmt = "4Q32sd3i32s3i128s"
+    self.ex_fmt = "2Qi32sid64si"
     self.shot_size = struct.calcsize(self.shot_fmt)
     self.order_size = struct.calcsize(self.order_fmt)
     self.strat_size = struct.calcsize(self.strat_fmt)
+    self.ex_size = struct.calcsize(self.ex_fmt)
 
   def get_ordersize(self):
     return self.order_struct_size
@@ -38,6 +40,13 @@ class Reader:
       #sys.exit(1)
     self.shot_struct_size = int(len(self.shot_content) / self.shot_size)
 
+  def load_ex_file(self, file_path):
+    self.ex_content = open(file_path).read()
+    if len(self.ex_content) % self.ex_size != 0:
+      print("%s filesize not shot's times" %(file_path))
+      #sys.exit(1)
+    self.ex_struct_size = int(len(self.ex_content) / self.ex_size)
+
   def load_strat_file(self, file_path):
     self.strat_content = open(file_path).read()
     if len(self.strat_content) % self.strat_size != 0:
@@ -56,6 +65,17 @@ class Reader:
     shot.ticker, shot.bids[0], shot.bids[1], shot.bids[2], shot.bids[3], shot.bids[4], shot.asks[0], shot.asks[1], shot.asks[2], shot.asks[3], shot.asks[4], shot.bid_sizes[0], shot.bid_sizes[1], shot.bid_sizes[2], shot.bid_sizes[3], shot.bid_sizes[4], shot.ask_sizes[0], shot.ask_sizes[1], shot.ask_sizes[2], shot.ask_sizes[3], shot.ask_sizes[4], shot.last_trade, shot.last_trade_size, shot.volume, shot.turnover, shot.open_interest, _, time_sec, time_usec, shot.is_initialized, res = struct.unpack(self.shot_fmt, content)
     shot.time = int(time_sec) + float("0."+str(time_usec))
     return shot.Filter()
+
+  def read_bex(self, i):
+    if i >= self.ex_struct_size:
+      print("oversize for ex %i > %i" %(i, self.ex_struct_size))
+      return ExchangeInfo()
+    content = self.ex_content[i*self.ex_size:(i+1)*self.ex_size]
+    #print(len(struct.unpack(self.shot_fmt, content)))
+    ex = ExchangeInfo()
+    shot_sec, shot_usec, ex.type, ex.ticker, ex.order_ref, ex.trade_size, ex.trade_price, ex.reason, ex.side = struct.unpack(self.ex_fmt, content)
+    ex.time_str = int(shot_sec) + float("0."+str(shot_usec))
+    return ex
 
   def read_bstrat(self, i):
     if i >= self.strat_struct_size:
