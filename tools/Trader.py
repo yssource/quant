@@ -11,17 +11,19 @@ def GetCon(ticker):
       return ticker[:i]
 
 class Trader:
-  def __init__(self, enable_fee = False, fee_rate=0.0, record=False):
+  def __init__(self, enable_fee = False, fee_rate=0.0, record=True):
     self.caler = CALER('/root/hft/config/contract/bk_contract.config')
     self.pt = Plotor()
     self.pos = {}
     self.avgcost = {}
     self.pnl = {}
+    self.raw_pnl = {}
+    self.pnl_hist = {}
+    self.raw_pnl_hist = {}
     self.fee = {}
     self.trade_count = {}
     self.fee_rate = fee_rate
     self.record = record
-    self.pnl_hist = {}
     if record == True:
       self.f = open('traders_record.txt', 'w')
 
@@ -37,21 +39,26 @@ class Trader:
       self.pos[ticker] = size
       self.avgcost[ticker] = price
       self.pnl[ticker] = 0.0
+      self.raw_pnl[ticker] = 0.0
       self.trade_count[ticker] = 1.0
       self.fee[ticker] = 0.0
       self.pnl_hist[ticker] = []
+      self.raw_pnl_hist[ticker] = []
       return
     if self.pos[ticker] * size < 0:  # close position
       if abs(size) > self.pos[ticker]:  # over close
         c = self.caler.CalFee(ticker, self.avgcost[ticker], abs(self.pos[ticker]), price, abs(self.pos[ticker]), GetCon(ticker) in no_today)
         self.fee[ticker] += c.open_fee + c.close_fee
         self.pnl[ticker] += self.caler.CalNetPnl(ticker, self.avgcost[ticker], abs(self.pos[ticker]), price, abs(self.pos[ticker]), OrderSide.Buy if size > 0 else OrderSide.Sell, GetCon(ticker) in no_today)
+        self.raw_pnl[ticker] += self.caler.CalPnl(ticker, self.avgcost[ticker], abs(self.pos[ticker]), price, abs(self.pos[ticker]), OrderSide.Buy if size > 0 else OrderSide.Sell)
         self.avgcost[ticker] = price
       else: # normal close
         c = self.caler.CalFee(ticker, self.avgcost[ticker], abs(size), price, abs(size), GetCon(ticker) in no_today)
         self.fee[ticker] += c.open_fee + c.close_fee
         self.pnl[ticker] += self.caler.CalNetPnl(ticker, self.avgcost[ticker], abs(size), price, abs(size), OrderSide.Buy if size > 0 else OrderSide.Sell, GetCon(ticker) in no_today)
+        self.raw_pnl[ticker] += self.caler.CalPnl(ticker, self.avgcost[ticker], abs(size), price, abs(size), OrderSide.Buy if size > 0 else OrderSide.Sell)
       self.pnl_hist[ticker].append(self.pnl[ticker])
+      self.raw_pnl_hist[ticker].append(self.raw_pnl[ticker])
     else:  # open position
       self.avgcost[ticker] += (price-self.avgcost[ticker])*size/(self.pos[ticker]+size)
     self.pos[ticker] += size
@@ -61,6 +68,10 @@ class Trader:
     trade_record = "Trade %s %d@%f" %(ticker, size, price)
     if self.record:
       self.f.write(trade_record+'\n')
+
+  def PNL(self):
+    print(self.pnl_hist)
+    print(self.raw_pnl_hist)
 
   def PlotStratPnl(self):
     self.strat_pnl_hist = {}
@@ -80,6 +91,26 @@ class Trader:
         self.strat_pnl_hist[con][i] += self.pnl_hist[t][i]
     #print(self.strat_pnl_hist)
     self.pt.PlotMultiMap(self.strat_pnl_hist, 'strat_pnl_hist')
+
+  def PlotStratRawPnl(self, show=False):
+    self.strat_pnl_hist = {}
+    for t in self.raw_pnl_hist:
+      con = GetCon(t)
+      if con == None:
+        continue
+      if con not in self.strat_pnl_hist:
+        self.strat_pnl_hist[con] = self.raw_pnl_hist[t]
+        continue
+      for i, c in enumerate(self.strat_pnl_hist[con]):
+        #print(self.strat_pnl_hist[con])
+        #print(self.pnl_hist[t])
+        #print(len(self.strat_pnl_hist[con]))
+        #print(len(self.pnl_hist[t]))
+        #print(t)
+        self.strat_pnl_hist[con][i] += self.raw_pnl_hist[t][i]
+    #print(self.strat_pnl_hist)
+    self.pt.PlotMultiMap(self.strat_pnl_hist, 'strat_rawpnl_hist', show=show)
+
 
   def Summary(self):
     print('================================================================================================================')
@@ -128,7 +159,7 @@ class Trader:
 if __name__=='__main__':
   t = Trader()
   r = Reader()
-  r.load_order_file('/today/order_backtest.dat')
+  r.load_order_file('/root/hft/build/bin/order.dat')
   s = r.get_ordersize()
   count = 0
   for i in range(s):
@@ -140,3 +171,4 @@ if __name__=='__main__':
       count += 1
   t.Summary()
   t.PlotStratPnl()
+  print(t.GenStratReport())

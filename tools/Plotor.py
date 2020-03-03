@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use("Agg")
+#matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import sys
 import math
@@ -17,10 +17,10 @@ class Plotor:
     items = sorted(items, key=lambda x:x[0])
     ax.plot([i[0] for i in items], [i[1] for i in items], label=label)
 
-  def PlotMultiMap(self, mmap, label, path = ''):
+  def PlotMultiMap(self, mmap, label, path = '', show=False):
     tickers = mmap.keys()
     ksize = len(tickers)
-    ncol, nrow = int(math.sqrt(ksize)), int(math.sqrt(ksize))+1
+    ncol, nrow = max(1, int(math.sqrt(ksize))), int(math.sqrt(ksize))+1
     fig,ax = plt.subplots(nrows=nrow,ncols=ncol,figsize=(self.one_width*ncol,int(self.graph_area/(ncol*self.one_width))))
     count = 0
     for t in tickers:
@@ -46,7 +46,10 @@ class Plotor:
       this_ax.legend()
       count += 1
     plt.tight_layout()
-    plt.savefig('%s%s@%d' %(path, label, count))
+    if show == True:
+      plt.show()
+    else:
+      plt.savefig('%s%s@%d' %(path, label, count))
 
 if __name__ == '__main__':
   pt = Plotor()
