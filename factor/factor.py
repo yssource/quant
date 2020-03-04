@@ -7,7 +7,6 @@ from Trader import *
 tr = Trader()
 shot = MarketSnapshot()
 
-def 
 
 def ReadData(date, ticker):
   path = '/root/'+date+'/'+ticker+'.csv'
