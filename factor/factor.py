@@ -3,10 +3,16 @@ import numpy as np
 #import matplotlib.pyplot as plt
 from market_snapshot import *
 from Trader import *
+from Dater import *
 
 tr = Trader()
 shot = MarketSnapshot()
 
+def LoadData(start_date, end_date, ticker):
+  dl = dateRange(start_date, end_date)
+  df=
+  for d in dl:
+    df = ReadData(d, ticker)
 
 def ReadData(date, ticker):
   path = '/root/'+date+'/'+ticker+'.csv'
