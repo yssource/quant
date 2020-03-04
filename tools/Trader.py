@@ -73,7 +73,7 @@ class Trader:
     print(self.pnl_hist)
     print(self.raw_pnl_hist)
 
-  def PlotStratPnl(self, file_name='strat_pnl_hist'):
+  def PlotStratPnl(self, file_name='strat_pnl_hist', show=False):
     self.strat_pnl_hist = {}
     for t in self.pnl_hist:
       con = GetCon(t)
@@ -90,7 +90,7 @@ class Trader:
         #print(t)
         self.strat_pnl_hist[con][i] += self.pnl_hist[t][i]
     #print(self.strat_pnl_hist)
-    self.pt.PlotMultiMap(self.strat_pnl_hist, file_name)
+    self.pt.PlotMultiMap(self.strat_pnl_hist, file_name, show=show)
 
   def PlotStratRawPnl(self, file_name='strat_rawpnl_hist', show=False):
     self.strat_pnl_hist = {}
