@@ -2,16 +2,19 @@ import websocket
 import json
 import pickle
 from market_snapshot import *
+import datetime
+import sys
 
 try:
     import thread
 except ImportError:
     import _thread as thread
 
+date = datetime.datetime.now().strftime("%Y-%m-%d")
 
 shot_map = {}
-f = open('crypto.log', 'a')
-f2 = open('crypto.pickle', 'ab+')
+f = open('crypto'+date+'.log', 'a')
+f2 = open('crypto'+date+'.pickle', 'ab+')
 def on_message(ws,message):
     global ticker, bids, asks, bid_sizes, ask_sizes, last_trade, last_trade_size, volume, turnover, open_interest, time, depth,num,content
     temp = json.loads(message)
@@ -19,9 +22,10 @@ def on_message(ws,message):
     ticker = symbol[0:7].upper()
     if ticker not in shot_map:
       shot_map[ticker] = MarketSnapshot()
+    shot_map[ticker].ticker = ticker
     topic = symbol[8:14]
     if topic == 'ticker':
-        shot_map[ticker].time = int(temp['data']['E'])
+        shot_map[ticker].time = int(str(temp['data']['E'])[0:10]) + float('0.'+str(temp['data']['E'])[10:])
         shot_map[ticker].last_trade_size = float(temp['data']['Q'])
         shot_map[ticker].last_trade = float(temp['data']['c'])
         shot_map[ticker].volume = float(temp['data']['v'])
@@ -34,8 +38,8 @@ def on_message(ws,message):
             shot_map[ticker].ask_sizes[i] = float(temp['data']['asks'][i][1])
     else:
       return
-    shot_map[ticker].Show(f)
-    pickle.dump(snapshot, f2, pickle.HIGHEST_PROTOCOL)
+    shot_map[ticker].ShowCSV(f)
+    pickle.dump(shot_map[ticker], f2, pickle.HIGHEST_PROTOCOL)
 
 def on_error(ws,error):
     print(error)
